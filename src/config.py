@@ -28,15 +28,25 @@ METADATA_JSON = MODELS_DIR / "model_metadata.json"
 EXPERIMENT_RESULTS_CSV = EXPERIMENTS_DIR / "results.csv"
 
 # Database Path - Supports Vercel Serverless /tmp fallback
-IS_VERCEL = bool(os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+IS_VERCEL = bool(
+    os.environ.get("VERCEL")
+    or os.environ.get("AWS_LAMBDA_FUNCTION_NAME")
+    or os.environ.get("LAMBDA_TASK_ROOT")
+    or not os.access(str(BASE_DIR), os.W_OK)
+)
+
 if IS_VERCEL:
     DB_PATH = Path("/tmp") / "sentinel.db"
 else:
     DB_PATH = DATA_DIR / "sentinel.db"
 
-# Ensure runtime directories exist
-for folder in [MODELS_DIR, FIGURES_DIR, EXPERIMENTS_DIR, DATA_DIR]:
-    folder.mkdir(parents=True, exist_ok=True)
+# Ensure runtime directories exist only if filesystem is writable
+if not IS_VERCEL:
+    for folder in [MODELS_DIR, FIGURES_DIR, EXPERIMENTS_DIR, DATA_DIR]:
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
 
 # Feature Schema
 FEATURE_COLUMNS = [
