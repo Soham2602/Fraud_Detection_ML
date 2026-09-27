@@ -1,0 +1,157 @@
+{
+  "platform": "SENTINEL \u2014 Fraud Intelligence Platform",
+  "model_name": "Tuned Random Forest",
+  "strategy": "SMOTE",
+  "training_date": "2026-09-27 23:39:31",
+  "dataset_shape": {
+    "total_rows": 283726,
+    "train_rows": 226980,
+    "test_rows": 56746,
+    "test_fraud_count": 95
+  },
+  "feature_count": 30,
+  "feature_list": [
+    "Time",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "V7",
+    "V8",
+    "V9",
+    "V10",
+    "V11",
+    "V12",
+    "V13",
+    "V14",
+    "V15",
+    "V16",
+    "V17",
+    "V18",
+    "V19",
+    "V20",
+    "V21",
+    "V22",
+    "V23",
+    "V24",
+    "V25",
+    "V26",
+    "V27",
+    "V28",
+    "Amount"
+  ],
+  "default_threshold": 0.5,
+  "metrics": {
+    "accuracy": 0.9994889507630493,
+    "precision": 0.9230769230769231,
+    "recall": 0.7578947368421053,
+    "f1": 0.8323699421965318,
+    "roc_auc": 0.9664014849926,
+    "average_precision": 0.8096487823614276,
+    "brier_score": 0.0005455260674271706
+  },
+  "confusion_matrix": [
+    [
+      56645,
+      6
+    ],
+    [
+      23,
+      72
+    ]
+  ],
+  "threshold_analysis": [
+    {
+      "threshold": 0.1,
+      "precision": 0.3575,
+      "recall": 0.8316,
+      "f1": 0.5,
+      "tp": 79,
+      "fp": 142,
+      "fn": 16,
+      "tn": 56509
+    },
+    {
+      "threshold": 0.2,
+      "precision": 0.6638,
+      "recall": 0.8105,
+      "f1": 0.7299,
+      "tp": 77,
+      "fp": 39,
+      "fn": 18,
+      "tn": 56612
+    },
+    {
+      "threshold": 0.3,
+      "precision": 0.7857,
+      "recall": 0.8105,
+      "f1": 0.7979,
+      "tp": 77,
+      "fp": 21,
+      "fn": 18,
+      "tn": 56630
+    },
+    {
+      "threshold": 0.4,
+      "precision": 0.8706,
+      "recall": 0.7789,
+      "f1": 0.8222,
+      "tp": 74,
+      "fp": 11,
+      "fn": 21,
+      "tn": 56640
+    },
+    {
+      "threshold": 0.5,
+      "precision": 0.9231,
+      "recall": 0.7579,
+      "f1": 0.8324,
+      "tp": 72,
+      "fp": 6,
+      "fn": 23,
+      "tn": 56645
+    },
+    {
+      "threshold": 0.6,
+      "precision": 0.9452,
+      "recall": 0.7263,
+      "f1": 0.8214,
+      "tp": 69,
+      "fp": 4,
+      "fn": 26,
+      "tn": 56647
+    },
+    {
+      "threshold": 0.7,
+      "precision": 0.9571,
+      "recall": 0.7053,
+      "f1": 0.8121,
+      "tp": 67,
+      "fp": 3,
+      "fn": 28,
+      "tn": 56648
+    },
+    {
+      "threshold": 0.8,
+      "precision": 0.9846,
+      "recall": 0.6737,
+      "f1": 0.8,
+      "tp": 64,
+      "fp": 1,
+      "fn": 31,
+      "tn": 56650
+    },
+    {
+      "threshold": 0.9,
+      "precision": 0.9828,
+      "recall": 0.6,
+      "f1": 0.7451,
+      "tp": 57,
+      "fp": 1,
+      "fn": 38,
+      "tn": 56650
+    }
+  ]
+}

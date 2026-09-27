@@ -10,8 +10,10 @@ __pycache__/
 
 # Large Datasets (over 100MB GitHub limit)
 data/creditcard.csv
-*.csv
+data/*.csv
+*.db
 !data/README.md
+!experiments/results.csv
 
 # Operating System Files
 .DS_Store

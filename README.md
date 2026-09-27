@@ -1,109 +1,192 @@
-# Credit Card Fraud Detection — B.Tech ML Mini-Project
+# SENTINEL — Fraud Intelligence Platform
+### Machine Learning Powered Transaction Risk Analysis & Investigation Vault
 
-A complete, end-to-end machine learning system that classifies credit card
-transactions as **legitimate (0)** or **fraudulent (1)**, built on the
-Kaggle Credit Card Fraud Detection dataset.
+[![Python Version](https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12%20|%203.14-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-30%20Passed%20%E2%9C%93-brightgreen.svg)](tests/)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com)
+[![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B.svg)](https://streamlit.io)
+[![Vercel Ready](https://img.shields.io/badge/Deploy-Vercel%20Serverless-black.svg)](vercel.json)
 
-## What's inside
+---
+
+## 1. Executive Summary & Overview
+
+**SENTINEL** is an end-to-end fraud monitoring and investigation platform powered by machine learning. Designed as a rigorous final-year B.Tech (AIML / ECE) project, it transforms conventional binary classification into a defense-grade fintech intelligence suite.
+
+Rather than a simplistic page that outputs "Fraud or Legit", SENTINEL provides:
+- **Calibrated Risk Scoring (0–100)** with dynamic operational risk bands (LOW, MEDIUM, HIGH, CRITICAL).
+- **Explainable AI (XAI)** powered by SHAP TreeExplainer decomposing single-transaction predictions into component-level force attributions.
+- **Dynamic Threshold Playground** modeling real-world asymmetric fraud costs (precision vs. recall trade-offs).
+- **Live Stream Simulation** generating synthetic high-velocity payment traffic with burst-attack injections.
+- **What-If Sensitivity Simulator** testing hypothetical parameter shifts without retraining.
+- **Analyst Investigation Vault & SQLite Audit Trail** supporting review workflows (Mark Reviewed, Clear Legitimate, Escalate).
+- **Dual Deployment Architecture**: Full multi-page Streamlit operations center + headless FastAPI REST backend deployable on **Vercel Serverless**.
+
+---
+
+## 2. System Architecture
+
+```text
+                           ┌────────────────────────────────────────┐
+                           │      SENTINEL OPERATIONS CENTER        │
+                           └──────────────────┬─────────────────────┘
+                                              │
+                     ┌────────────────────────┴────────────────────────┐
+                     ▼                                                 ▼
+       ┌───────────────────────────┐                     ┌───────────────────────────┐
+       │   Streamlit Multi-Page    │                     │     FastAPI REST API      │
+       │   Interactive Dashboard   │                     │  Vercel Serverless / ASGI │
+       │         (app.py)          │                     │       (api/index.py)      │
+       └─────────────┬─────────────┘                     └─────────────┬─────────────┘
+                     │                                                 │
+                     └────────────────────────┬────────────────────────┘
+                                              ▼
+                           ┌─────────────────────────────────────┐
+                           │    ModelService & Validation Core   │
+                           │       (src/model_service.py)        │
+                           └──────────────────┬──────────────────┘
+                                              │
+         ┌───────────────────┬────────────────┼────────────────────┬───────────────────┐
+         ▼                   ▼                ▼                    ▼                   ▼
+┌─────────────────┐ ┌─────────────────┐ ┌───────────┐    ┌───────────────────┐ ┌──────────────┐
+│  Scikit-Learn   │ │  Imb-Pipeline   │ │   SHAP    │    │  SQLite Database  │ │  Simulation  │
+│  Random Forest  │ │  SMOTE + Scaler │ │ Explainer │    │  Vault & Audit    │ │  & What-If   │
+│  (Tuned Model)  │ │  (Leak-Free)    │ │   (XAI)   │    │  (sentinel.db)    │ │  Engine      │
+└─────────────────┘ └─────────────────┘ └───────────┘    └───────────────────┘ └──────────────┘
+```
+
+---
+
+## 3. Empirical Model Performance & Benchmarks
+
+All models were evaluated on the held-out 20% test fold (56,746 legitimate, 95 fraudulent transactions) using strict stratified splitting before scaling or resampling:
+
+| Model | Imbalance Strategy | Accuracy | Precision | Recall | F1-Score | ROC-AUC | PR-AUC (Avg Prec) |
+|---|---|---|---|---|---|---|---|
+| Logistic Regression | Class-Weight | 0.9752 | 0.0562 | **0.8737** | 0.1057 | 0.9658 | 0.6719 |
+| Logistic Regression | SMOTE | 0.9737 | 0.0530 | **0.8737** | 0.1000 | 0.9619 | 0.6769 |
+| Decision Tree | Class-Weight | 0.9953 | 0.2320 | 0.7789 | 0.3575 | 0.8886 | 0.5035 |
+| Decision Tree | SMOTE | 0.9866 | 0.0917 | 0.7895 | 0.1643 | 0.8424 | 0.4147 |
+| Random Forest | Class-Weight | 0.9995 | **0.9452** | 0.7263 | 0.8214 | 0.9391 | 0.8012 |
+| **Tuned Random Forest** | **SMOTE Pipeline** | **0.9995** | **0.9231** | **0.7579** | **0.8324** | **0.9664** | **0.8096** |
+
+> **Key Academic Takeaway:** On severely imbalanced tabular data (0.17% fraud rate), Plain Accuracy (99.95%) is uninformative. **PR-AUC (0.8096)** and **F1-Score (0.8324)** prove that Tuned Random Forest with SMOTE pipeline achieves the optimal trade-off between catching fraud and minimizing customer friction.
+
+---
+
+## 4. Repository Structure
 
 ```text
 Fraud_Detection_ML/
-│
+├── api/
+│   └── index.py               ← Vercel serverless entrypoint + web portal
 ├── data/
-│   └── README.md              ← where to download creditcard.csv
-│
+│   ├── sample_presets.json    ← Curated real benchmark records (legit, borderline, fraud)
+│   ├── creditcard.csv         ← Full Kaggle dataset (150 MB, download via data/README.md)
+│   └── sentinel.db            ← SQLite persistence vault (auto-generated)
+├── experiments/
+│   └── results.csv            ← Measured benchmark results across all 6 models
+├── figures/                   ← Confusion matrices, ROC curves, PR curves (.png)
+├── models/
+│   ├── fraud_detection_model.pkl  ← Tuned Random Forest (compressed, 13.4 MB)
+│   ├── scaler.pkl                 ← Fitted StandardScaler
+│   ├── feature_columns.pkl        ← Feature schema order
+│   └── model_metadata.json        ← Comprehensive training telemetry & hyperparameters
 ├── notebooks/
-│   └── fraud_detection.ipynb  ← full EDA + modeling walkthrough
-│
+│   └── fraud_detection.ipynb  ← Exploratory Data Analysis & modeling walkthrough
 ├── src/
-│   ├── preprocessing.py       ← cleaning, scaling, SMOTE, class weights
-│   ├── train.py                ← trains + compares models, tunes, saves
-│   ├── evaluate.py             ← metrics, confusion matrix, ROC curve
-│   └── predict.py              ← load model and predict new transactions
-│
-├── models/                     ← trained model + scaler saved here (.pkl)
-│
-├── app.py                      ← Streamlit web demo
-│
-├── requirements.txt
-├── README.md                   ← you are here
-└── PROJECT_REPORT.md           ← full write-up, metric explanations, viva Q&A
+│   ├── config.py              ← Paths, schemas, risk bands, environment detection
+│   ├── validation.py          ← Defensive input sanitization & human-readable errors
+│   ├── preprocessing.py       ← Zero-leakage data cleaning, splitting, and scaling
+│   ├── evaluate.py            ← PR-AUC, ROC-AUC, threshold analysis, curve plotting
+│   ├── train.py               ← Automated cross-validation and pipeline tuning
+│   ├── model_service.py       ← Core inference engine & risk scoring (0-100)
+│   ├── database.py            ← SQLite persistence, alert queues & review logs
+│   ├── explainability.py      ← SHAP TreeExplainer & feature attribution engine
+│   ├── simulation.py          ← Live stream generator & What-If sensitivity simulator
+│   └── api.py                 ← FastAPI REST backend
+├── tests/                     ← Comprehensive test suite (30 pytest unit tests)
+│   ├── test_validation.py
+│   ├── test_model_service.py
+│   ├── test_database.py
+│   ├── test_explainability.py
+│   ├── test_simulation.py
+│   └── test_api.py
+├── app.py                     ← SENTINEL Multi-Page Streamlit Operations Center
+├── requirements.txt           ← Pinned Python dependencies
+├── vercel.json                ← Vercel Serverless configuration
+├── pytest.ini                 ← Pytest environment configuration
+├── PROJECT_REPORT.md          ← Comprehensive academic project documentation
+├── PRESENTATION.md            ← 12-slide presentation deck with speaker notes
+└── VIVA.md                    ← 40+ rigorous viva examination questions & answers
 ```
 
-## 1. Setup
+---
 
+## 5. Quickstart Guide (Local Setup)
+
+### Step 1: Clone & Create Virtual Environment
 ```bash
-# from inside Fraud_Detection_ML/
+git clone https://github.com/Soham2602/Fraud_Detection_ML.git
+cd Fraud_Detection_ML
+
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
+
+# Activate environment
+# On Windows:
+.\venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-## 2. Get the dataset
-
-Follow the instructions in `data/README.md` to download `creditcard.csv`
-from Kaggle and place it at `data/creditcard.csv`.
-
-## 3. Explore the data (optional but recommended)
-
+### Step 2: Run Unit Test Suite
 ```bash
-jupyter notebook notebooks/fraud_detection.ipynb
+pytest -v
 ```
+*Expected: 30 passed in ~8s.*
 
-This notebook walks through data inspection, EDA charts, and a first pass
-at modeling — useful for understanding the project before presenting it.
-
-## 4. Train the models
-
-```bash
-cd src
-python train.py
-```
-
-This will:
-- Load and clean the data
-- Split into train/test (stratified, before any scaling/resampling)
-- Scale `Time` and `Amount`
-- Train Logistic Regression, Decision Tree, and Random Forest under
-  **both** class-weighting and SMOTE strategies
-- Print a full metrics report for every model/strategy combination
-- Run a small `RandomizedSearchCV` hyperparameter search on Random Forest
-- Save the best model, the fitted scaler, and the feature column order to
-  `models/`
-- Save confusion matrix and ROC curve plots to `figures/`
-
-## 5. Try a quick prediction from the command line
-
-```bash
-python src/predict.py
-```
-
-Loads 5 random transactions from the dataset and shows the model's
-prediction vs. the actual label for each.
-
-## 6. Run the web demo
-
+### Step 3: Launch SENTINEL Streamlit Operations Center
 ```bash
 streamlit run app.py
 ```
+Open [http://localhost:8501](http://localhost:8501) in your browser.
 
-Opens a browser tab where you can:
-- Fill in a transaction manually (or auto-fill from a random real sample)
-  and get an instant prediction
-- Upload a CSV of transactions and download predictions for all of them
+### Step 4: Run FastAPI REST Backend (Optional)
+```bash
+uvicorn src.api:app --reload --port 8000
+```
+Interactive Swagger UI documentation: [http://localhost:8000/docs](http://localhost:8000/docs).
 
-## Notes on methodology
+---
 
-- **No data leakage**: scaling and SMOTE are fit only on the training
-  split, never on the test set.
-- **Accuracy is not the headline metric** — with fraud making up ~0.17%
-  of transactions, a model that predicts "legitimate" every single time
-  would still be >99.8% accurate while catching zero fraud. Precision,
-  Recall, F1, and ROC-AUC are used instead. See `PROJECT_REPORT.md` for
-  a full explanation.
+## 6. Deployment to Vercel
 
-## For presentations / viva
+SENTINEL is pre-configured for **1-click Vercel Serverless Deployment**:
 
-See `PROJECT_REPORT.md` — it includes a plain-language explanation of
-every step suitable for a slide deck, plus a set of likely viva questions
-with answers.
+1. Push your repository to GitHub.
+2. Sign in to [Vercel](https://vercel.com) and click **"Add New Project"**.
+3. Import `Fraud_Detection_ML`.
+4. Leave build settings as default (Vercel automatically detects `vercel.json` and Python ASGI runtime).
+5. Click **Deploy**.
+6. Visit your live deployment URL — it serves the interactive SENTINEL Web Portal connected to the serverless FastAPI backend!
+
+---
+
+## 7. Data Honesty & Academic Governance
+
+- **Anonymized PCA Features:** The dataset features $V_1$ through $V_{28}$ are anonymized principal components. SENTINEL does **not** hallucinate semantic labels (e.g. "suspicious merchant name" or "unusual IP address") for $V_i$. All SHAP explanations explicitly refer to PCA component vectors.
+- **Simulation Layer:** Human-friendly fields (Transaction Channel, Merchant Category, Location) are clearly labeled as a **demo simulation layer** and never conflated with original dataset features.
+- **Zero Data Leakage:** Train/test splitting strictly precedes feature scaling and SMOTE resampling. Resampling during cross-validation is performed inside an `imblearn.pipeline.Pipeline`.
+- **Privacy Notice:** Never enter real credit card numbers, CVVs, or bank credentials.
+
+---
+
+## 8. License & Acknowledgements
+
+- **Dataset:** Andrea Dal Pozzolo, Olivier Caelen, Reid A. Johnson, and Gianluca Bontempi. *Calibrating Probability with Undersampling for Fraud Detection in Credit Card Data*. IEEE Symposium on Computational Intelligence and Data Mining (CIDM), 2015.
+- **License:** Open-source MIT License. Built for B.Tech AIML / ECE Final Mini-Project submission.

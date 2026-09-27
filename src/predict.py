@@ -1,87 +1,121 @@
 """
 predict.py
 ----------
-Loads the saved model + scaler and makes predictions on new transaction(s).
+Inference module for SENTINEL — Fraud Intelligence Platform.
+Preserves full backward compatibility with the original function signatures
+while adding robust validation and risk scoring through ModelService.
 
-Usage as a script (predicts on a sample from data/creditcard.csv):
+Usage as a script:
     python src/predict.py
 
-Usage as a module (used by app.py):
-    from predict import load_artifacts, predict_transaction
+Usage as a module:
+    from predict import load_artifacts, predict_transaction, predict_batch
 """
 
 import os
-import joblib
+import sys
+from pathlib import Path
+from typing import Dict, Any, Tuple, Optional
 import pandas as pd
 import numpy as np
 
-MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
+# Ensure src is on sys.path
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from config import CREDITCARD_CSV, SAMPLE_PRESETS_JSON, DEFAULT_THRESHOLD
+from model_service import ModelService
 
 
 def load_artifacts():
-    """Load the trained model, fitted scaler, and expected feature order."""
-    model = joblib.load(os.path.join(MODELS_DIR, "fraud_detection_model.pkl"))
-    scaler = joblib.load(os.path.join(MODELS_DIR, "scaler.pkl"))
-    feature_columns = joblib.load(os.path.join(MODELS_DIR, "feature_columns.pkl"))
-    return model, scaler, feature_columns
+    """Load model, scaler, and expected feature columns (backward-compatible)."""
+    service = ModelService.get_instance()
+    service.ensure_loaded()
+    return service.model, service.scaler, service.feature_columns
 
 
-def predict_transaction(input_dict, model=None, scaler=None, feature_columns=None):
+def predict_transaction(
+    input_dict: Dict[str, Any],
+    model=None,
+    scaler=None,
+    feature_columns=None,
+    threshold: float = DEFAULT_THRESHOLD,
+) -> Tuple[int, float]:
     """
-    input_dict: a dict with keys Time, V1..V28, Amount (matching the
-    original dataset's columns).
-
-    Returns: (prediction, fraud_probability)
-        prediction: 0 (legitimate) or 1 (fraud)
-        fraud_probability: model's confidence that this is fraud (0-1)
+    Predict a single transaction.
+    Backward-compatible signature: returns (prediction: int, fraud_probability: float).
     """
-    if model is None or scaler is None or feature_columns is None:
-        model, scaler, feature_columns = load_artifacts()
+    service = ModelService.get_instance()
+    # Override artifacts if custom instances were passed
+    if model is not None:
+        service.model = model
+    if scaler is not None:
+        service.scaler = scaler
+    if feature_columns is not None:
+        service.feature_columns = feature_columns
 
-    row = pd.DataFrame([input_dict])[feature_columns]
-
-    scale_cols = [c for c in ("Time", "Amount") if c in row.columns]
-    row[scale_cols] = scaler.transform(row[scale_cols])
-
-    prediction = model.predict(row)[0]
-    probability = model.predict_proba(row)[0][1]
-
-    return int(prediction), float(probability)
+    result = service.predict_single(input_dict, threshold=threshold)
+    return result["prediction"], result["fraud_probability"]
 
 
-def predict_batch(df, model=None, scaler=None, feature_columns=None):
-    """Same as predict_transaction but for a whole DataFrame of transactions."""
-    if model is None or scaler is None or feature_columns is None:
-        model, scaler, feature_columns = load_artifacts()
+def predict_batch(
+    df: pd.DataFrame,
+    model=None,
+    scaler=None,
+    feature_columns=None,
+    threshold: float = DEFAULT_THRESHOLD,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Batch prediction.
+    Backward-compatible signature: returns (predictions: np.ndarray, probabilities: np.ndarray).
+    """
+    service = ModelService.get_instance()
+    if model is not None:
+        service.model = model
+    if scaler is not None:
+        service.scaler = scaler
+    if feature_columns is not None:
+        service.feature_columns = feature_columns
 
-    df = df[feature_columns].copy()
-    scale_cols = [c for c in ("Time", "Amount") if c in df.columns]
-    df[scale_cols] = scaler.transform(df[scale_cols])
-
-    predictions = model.predict(df)
-    probabilities = model.predict_proba(df)[:, 1]
-    return predictions, probabilities
+    enriched, _ = service.predict_batch(df, threshold=threshold)
+    return enriched["Predicted_Class"].values, enriched["Fraud_Probability"].values
 
 
 if __name__ == "__main__":
-    data_path = os.path.join(os.path.dirname(__file__), "..", "data", "creditcard.csv")
-    if not os.path.exists(data_path):
-        print("data/creditcard.csv not found. See README.md for download instructions.")
-        raise SystemExit(1)
+    import json
+    service = ModelService.get_instance()
+    service.ensure_loaded()
 
-    model, scaler, feature_columns = load_artifacts()
-    df = pd.read_csv(data_path)
-    sample = df.sample(5, random_state=1)
+    # Try presets first, fallback to creditcard.csv
+    if SAMPLE_PRESETS_JSON.exists():
+        print(f"Loading sample transactions from {SAMPLE_PRESETS_JSON.name}...")
+        with open(SAMPLE_PRESETS_JSON, "r") as f:
+            samples = json.load(f)
 
-    y_true = sample["Class"].values
-    X_sample = sample.drop(columns=["Class"])
+        for i, s in enumerate(samples[:6]):
+            res = service.predict_single(s["features"])
+            label = "[FRAUD]" if res["prediction"] == 1 else "[LEGIT]"
+            actual = "FRAUD" if s.get("actual_class") == 1 else "Legitimate"
+            print(
+                f"[{i+1}] {s['name'][:35]:<35} | "
+                f"Pred: {label:<8} | Score: {res['risk_score']:>3}/100 ({res['risk_level']:<8}) | "
+                f"Actual: {actual}"
+            )
+    elif CREDITCARD_CSV.exists():
+        print(f"Sampling transactions from {CREDITCARD_CSV.name}...")
+        df = pd.read_csv(CREDITCARD_CSV)
+        sample = df.sample(5, random_state=42)
+        y_true = sample["Class"].values
+        X_sample = sample.drop(columns=["Class"])
 
-    preds, probs = predict_batch(X_sample, model, scaler, feature_columns)
-
-    for i in range(len(sample)):
-        label = "FRAUD" if preds[i] == 1 else "Legitimate"
-        actual = "FRAUD" if y_true[i] == 1 else "Legitimate"
-        print(
-            f"Transaction {i+1}: Predicted = {label} "
-            f"(confidence {probs[i]:.2%})  |  Actual = {actual}"
-        )
+        preds, probs = predict_batch(X_sample)
+        for i in range(len(sample)):
+            label = "FRAUD" if preds[i] == 1 else "Legitimate"
+            actual = "FRAUD" if y_true[i] == 1 else "Legitimate"
+            print(
+                f"Transaction {i+1}: Predicted = {label:<10} "
+                f"(confidence: {probs[i]:.2%})  |  Actual = {actual}"
+            )
+    else:
+        print("No sample presets or dataset found. Please run preprocessing first.")

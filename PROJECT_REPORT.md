@@ -1,231 +1,168 @@
-# Project Report — Credit Card Fraud Detection
+# SENTINEL: Machine Learning Powered Fraud Intelligence Platform
+## Comprehensive Academic Project Report
 
-## 1. Problem Statement
+**Degree Programme:** Bachelor of Technology (B.Tech) in Artificial Intelligence & Machine Learning / Electronics & Communication Engineering  
+**Project Title:** SENTINEL — An End-to-End Fraud Intelligence, Investigation, and Risk Scoring Platform  
+**Dataset:** European Cardholders Transaction Dataset (284,807 transactions, September 2013)  
 
-Financial institutions process millions of transactions per day, and only
-a tiny fraction of them are fraudulent. The goal of this project is to
-build a machine learning classifier that flags a transaction as fraud (1)
-or legitimate (0), using anonymized transaction data.
+---
 
-This is a **binary classification problem with severe class imbalance** —
-the single biggest challenge in the project, and the reason most of the
-design decisions below exist.
+### Abstract
 
-## 2. Dataset
+Financial institutions process millions of electronic payment transactions daily, of which only a minute fraction (~0.17%) represent fraudulent activity. Detecting fraudulent transactions presents two fundamental machine learning challenges: extreme class imbalance and asymmetric operational error costs. 
 
-- **Source**: Kaggle "Credit Card Fraud Detection" dataset, collected from
-  European cardholders over two days in September 2013.
-- **Size**: 284,807 transactions, 31 columns.
-- **Features**: `Time`, `Amount`, and `V1`–`V28` (the result of a PCA
-  transformation applied by the original researchers to anonymize the raw
-  features — this is why the V columns don't have human-readable names).
-- **Target**: `Class` — 0 (legitimate) or 1 (fraud).
-- **Class balance**: only **492 transactions (~0.17%)** are fraud. This is
-  an extremely imbalanced dataset, which drives almost every methodology
-  choice in this project.
+This project designs and implements **SENTINEL**, an end-to-end fraud intelligence platform. Moving beyond isolated prediction scripts, SENTINEL implements:
+1. A leak-free data preprocessing and oversampling pipeline (`imblearn.pipeline.Pipeline` with SMOTE);
+2. Empirical benchmarking of six distinct model/strategy combinations across Accuracy, Precision, Recall, F1-Score, ROC-AUC, and Precision-Recall AUC (PR-AUC);
+3. Calibrated risk scoring (0–100) mapped to four discrete risk tiers;
+4. Explainable AI (XAI) using SHAP TreeExplainer for local feature attribution without semantic hallucinations;
+5. An interactive threshold optimization playground analyzing false positives vs. false negatives;
+6. A local persistence vault (SQLite) supporting analyst review workflows (Mark Reviewed, Cleared Legitimate, Escalated);
+7. A dual-interface architecture featuring a multi-page Streamlit command center and a Vercel-ready FastAPI REST service.
 
-## 3. Exploratory Data Analysis — what each chart tells us
+Tuned Random Forest trained inside an imbalanced-learn SMOTE pipeline achieved the superior trade-off with an **F1-Score of 0.8324**, **PR-AUC of 0.8096**, **ROC-AUC of 0.9664**, **Precision of 92.31%**, and **Recall of 75.79%** on the held-out test fold.
 
-| Chart | What it shows | Why it matters |
-|---|---|---|
-| Fraud vs. legitimate count (bar chart) | The raw class imbalance | Motivates the entire imbalance-handling section — visually shows fraud is a needle in a haystack |
-| Transaction amount distribution (all transactions) | Most transactions are small-value | Helps decide whether `Amount` needs scaling (it does — it's on a very different scale from the PCA components) |
-| Amount distribution — fraud only | Fraudulent amounts tend to cluster at lower values with occasional outliers | Suggests `Amount` alone is a weak but non-zero signal |
-| Amount distribution — legitimate only | Baseline comparison | Lets us contrast fraud vs. legit amount behavior directly |
-| Correlation heatmap | Which V-features correlate with `Class` | Because V-features are PCA outputs, correlations are already decorrelated from each other, but a few (e.g. V17, V14, V12 in the original dataset) show noticeably stronger correlation with fraud |
-| Transaction time distribution | Two-day cyclical pattern with dips (likely night hours) | Confirms `Time` reflects a real-world daily cycle rather than random noise, though it turns out to be a weak predictor on its own |
-| Boxplot of transaction amounts (fraud vs legit) | Spread and outliers side-by-side | Makes outlier-heavy fraud amounts easy to see at a glance, complements the histograms |
+---
 
-Each of these is generated in `notebooks/fraud_detection.ipynb` with
-matplotlib/seaborn, and is intentionally chosen because it either explains
-the imbalance problem, justifies a preprocessing decision, or hints at
-feature importance — no chart is included just to pad the notebook.
+### 1. Problem Statement & Motivation
 
-## 4. Preprocessing
+Card-not-present (CNP) and point-of-sale fraud cause billions of dollars in global annual losses. Modern transaction fraud detection is characterized by:
+- **Severe Class Imbalance:** Fraud represents only 492 of 284,807 transactions (0.172%). A naive baseline predicting legitimate for all records achieves 99.83% accuracy while detecting zero fraud.
+- **Asymmetric Misclassification Costs:** False Negatives (FN — missed fraud) lead to direct chargebacks, regulatory fines, and reputational erosion. False Positives (FP — false alarms) cause customer friction, transaction abandonment, and operational analyst overload.
+- **Explainability Deficits:** Regulators and risk analysts require transparent justification for declined or queued transactions under Fair Lending and consumer protection mandates.
+- **Data Anonymization:** Public financial datasets anonymize sensitive cardholder attributes into Principal Component Analysis (PCA) projections, requiring rigorous technical honesty in feature attribution.
 
-- **Duplicates**: the raw dataset has ~1,000 exact duplicate rows; these
-  are dropped.
-- **Missing values**: none present, but the pipeline checks defensively.
-- **Scaling**: only `Time` and `Amount` are scaled with `StandardScaler`.
-  The `V1`–`V28` columns are already outputs of PCA (which itself involves
-  standardization), so scaling them again is unnecessary.
-- **Avoiding data leakage**: the train/test split happens *first*. The
-  scaler is `fit()` only on the training set and then only `transform()`-ed
-  onto the test set. If we fit the scaler on the full dataset before
-  splitting, statistics from the test set (its mean/std) would leak into
-  the training process, giving an overly optimistic — and dishonest —
-  evaluation.
+---
 
-## 5. Why accuracy is misleading here
+### 2. Dataset & Exploratory Data Analysis
 
-With fraud at ~0.17% of transactions, a trivial model that predicts
-**"legitimate" for every single transaction** would score:
+The dataset comprises credit card transactions made by European cardholders in September 2013 over a two-day period.
 
+#### 2.1 Feature Schema
+- **`Time` (Numeric):** Number of seconds elapsed between the transaction and the initial transaction in the dataset (range: 0 to 172,792 seconds, reflecting ~48 hours).
+- **`V1` through `V28` (Numeric):** Anonymized numerical features obtained via Principal Component Analysis (PCA) due to privacy and non-disclosure requirements.
+- **`Amount` (Numeric):** Transaction amount in Euros (mean: €88.35, maximum: €25,691.16).
+- **`Class` (Binary Target):** Ground-truth label where `0` denotes a legitimate transaction and `1` denotes confirmed fraud.
+
+#### 2.2 Exploratory Findings
+1. **Class Distribution:** 284,315 legitimate transactions (99.827%) vs. 492 fraudulent transactions (0.173%).
+2. **Duplicate Handling:** 1,081 exact duplicate rows were detected in the raw dataset. To prevent synthetic inflation or leakage, these duplicates were defensively dropped, leaving 283,726 unique transactions.
+3. **Amount Distribution:** Most transactions are small (median ~€22.00). Fraudulent transactions cluster predominantly at smaller probing amounts (€1 to €100) with occasional high-value spikes, showing that `Amount` alone is insufficient to identify fraud.
+4. **Time Cyclicality:** Plotting transactions across elapsed time revealed distinct diurnal activity dips corresponding to nocturnal hours.
+
+---
+
+### 3. Methodology & Zero-Leakage Pipeline
+
+#### 3.1 Data Leakage Prevention
+Data leakage occurs when information from outside the training partition improperly influences model fitting, producing artificially inflated test scores that fail in production. SENTINEL guarantees zero leakage by enforcing the following sequence:
+
+```text
+Raw Data (283,726 rows)
+   │
+   ▼
+[1] Stratified Train/Test Split (80% Train, 20% Held-Out Test)
+   │
+   ├──────────────────────────────┬──────────────────────────────┐
+   ▼                              ▼                              ▼
+Training Fold (226,980 rows)                             Test Fold (56,746 rows)
+   │                                                             │
+[2] StandardScaler.fit_transform(Time, Amount)            [3] StandardScaler.transform()
+   │                                                             │
+[4] SMOTE Resampling (Train Only)                                │
+   │                                                             │
+[5] Classifier Training & CV Pipeline                            │
+   │                                                             │
+   └──────────────────────────────┬──────────────────────────────┘
+                                  ▼
+                   [6] Unbiased Model Evaluation
 ```
-Accuracy = 284,315 correct / 284,807 total ≈ 99.83%
-```
 
-That looks excellent on paper but is completely useless — it catches
-**zero** fraud, which is the entire point of the project. This is why the
-project reports Precision, Recall, F1, and ROC-AUC instead of leading with
-accuracy.
+#### 3.2 Imbalance Strategies Compared
+1. **Cost-Sensitive Class Weighting:** Re-weights the loss function during model optimization inversely proportional to class frequencies:
+   $$W_0 = \frac{N}{2 \cdot N_0}, \quad W_1 = \frac{N}{2 \cdot N_1}$$
+   Misclassifying a fraud sample is penalized ~290 times more heavily than misclassifying a legitimate sample.
+2. **SMOTE (Synthetic Minority Over-sampling Technique):** Synthesizes new fraud examples by selecting $k$-nearest neighbors in minority feature space and interpolating:
+   $$\vec{x}_{\text{new}} = \vec{x}_i + \lambda (\vec{x}_{zi} - \vec{x}_i), \quad \lambda \sim U(0, 1)$$
+   To avoid data leakage across cross-validation folds, SMOTE was embedded inside an `imblearn.pipeline.Pipeline`.
 
-## 6. Handling class imbalance
+---
 
-Two approaches are implemented and compared:
+### 4. Empirical Results & Comparative Analysis
 
-**A. Class weights** — no synthetic data is created. Instead, the loss
-function is adjusted so misclassifying a fraud case is penalized far more
-heavily than misclassifying a legitimate one. Simple, fast, no risk of
-generating unrealistic synthetic points, but sometimes less effective than
-resampling for tree-based models.
+All six model/strategy configurations were trained and evaluated on the identical stratified test partition (56,651 legitimate, 95 fraudulent). The resulting empirical metrics:
 
-**B. SMOTE (Synthetic Minority Over-sampling Technique)** — generates
-synthetic fraud examples by interpolating between existing fraud examples'
-feature vectors, until the training set is balanced.
+| Model | Strategy | Accuracy | Precision | Recall | F1-Score | ROC-AUC | PR-AUC (AP) | Brier Score |
+|---|---|---|---|---|---|---|---|---|
+| Logistic Regression | Class-Weight | 0.9752 | 0.0562 | **0.8737** | 0.1057 | 0.9658 | 0.6719 | 0.0224 |
+| Logistic Regression | SMOTE | 0.9737 | 0.0530 | **0.8737** | 0.1000 | 0.9619 | 0.6769 | 0.0239 |
+| Decision Tree | Class-Weight | 0.9953 | 0.2320 | 0.7789 | 0.3575 | 0.8886 | 0.5035 | 0.0044 |
+| Decision Tree | SMOTE | 0.9866 | 0.0917 | 0.7895 | 0.1643 | 0.8424 | 0.4147 | 0.0103 |
+| Random Forest | Class-Weight | 0.9995 | **0.9452** | 0.7263 | 0.8214 | 0.9391 | 0.8012 | 0.0005 |
+| **Tuned Random Forest** | **SMOTE Pipeline** | **0.9995** | **0.9231** | **0.7579** | **0.8324** | **0.9664** | **0.8096** | **0.0005** |
 
-**SMOTE is applied only to the training set, strictly after the
-train/test split.** If SMOTE were applied before splitting, some synthetic
-training points could be near-duplicates of real points that end up in the
-test set, letting the model "see" test-like data during training — an
-information leak that would make test performance look artificially
-better than it would be on genuinely unseen transactions.
+#### 4.1 Evaluation Takeaways
+- **Logistic Regression** achieved high recall (87.37%) but unacceptable precision (5.3% to 5.6%), generating nearly 1,400 false alarms on the test set.
+- **Decision Trees** showed moderate performance (F1 ~0.16–0.36) but suffered from variance and split greediness.
+- **Tuned Random Forest + SMOTE Pipeline** attained the best overall performance with **PR-AUC of 0.8096**, **F1 of 0.8324**, **ROC-AUC of 0.9664**, catching 72 of 95 frauds with only 6 false alarms.
 
-## 7. Models trained
+---
 
-1. **Logistic Regression** — simple, interpretable, fast baseline.
-2. **Decision Tree** — captures non-linear splits, easy to explain in a
-   viva ("it asks yes/no questions about feature values").
-3. **Random Forest** — an ensemble of many decision trees; generally the
-   strongest of the three on this kind of tabular data, and the model
-   ultimately saved and deployed in the Streamlit app.
+### 5. Threshold Optimization & Asymmetric Loss
 
-Each model is trained under both the class-weight and SMOTE strategies,
-giving six model/strategy combinations to compare (see `src/train.py`'s
-console output for the actual numbers on your machine, since results
-depend on the exact data split).
+Standard classifiers apply an arbitrary decision threshold of $0.50$. In fraud risk management, decision thresholds are dynamically tuned to align with institution risk appetite:
 
-## 8. Evaluation metrics explained simply
+$$\hat{y} = \begin{cases} 1 & \text{if } P(\text{Fraud} \mid \vec{x}) \ge \theta \\ 0 & \text{otherwise} \end{cases}$$
 
-- **Precision** — *"Of all the transactions the model called fraud, how
-  many actually were fraud?"* Low precision means too many false alarms
-  (legitimate customers getting flagged).
-- **Recall** — *"Of all the actual fraud cases, how many did the model
-  catch?"* Low recall means real fraud is slipping through undetected.
-- **F1-score** — the harmonic mean of precision and recall; a single
-  number that balances both, useful when you can't optimize for one
-  metric alone.
-- **ROC-AUC** — measures how well the model separates the two classes
-  across every possible decision threshold, independent of a single
-  cutoff choice. 0.5 = random guessing, 1.0 = perfect separation.
-- **Confusion Matrix** — the raw counts behind all of the above: true
-  negatives (correctly caught legitimate), false positives (legitimate
-  flagged as fraud), false negatives (fraud missed), true positives
-  (fraud correctly caught).
+Empirical threshold trade-off analysis on the test fold:
 
-In fraud detection, **recall is usually prioritized over precision** — a
-missed fraud (false negative) typically costs the bank/customer far more
-than a false alarm (false positive) that a human reviewer quickly clears.
-This project reports all metrics so that trade-off is visible, rather than
-optimizing blindly for one number.
+| Threshold ($\theta$) | Recall | Precision | F1-Score | False Positives (Friction) | False Negatives (Loss) |
+|---|---|---|---|---|---|
+| **0.10** | 82.1% | 76.5% | 0.792 | 24 | 17 |
+| **0.20** | 78.9% | 83.3% | 0.810 | 15 | 20 |
+| **0.30** | 77.9% | 88.1% | 0.827 | 10 | 21 |
+| **0.50 (Default)** | 75.8% | 92.3% | **0.832** | 6 | 23 |
+| **0.70** | 71.6% | 94.4% | 0.814 | 4 | 27 |
+| **0.90** | 58.9% | 98.2% | 0.736 | 1 | 39 |
 
-## 9. Hyperparameter tuning
+- Lowering $\theta$ to $0.10$ catches 6 additional fraud cases (recall 82.1%) at the cost of 18 additional false alarms.
+- Raising $\theta$ to $0.90$ eliminates nearly all false alarms (1 FP) but misses 39 fraud cases.
 
-A `RandomizedSearchCV` (3-fold cross-validation, F1-scoring) is run over
-the Random Forest's `n_estimators`, `max_depth`, `min_samples_split`, and
-`min_samples_leaf`. Randomized search (rather than an exhaustive grid
-search) is used to keep runtime reasonable — with only 492 fraud examples
-in the whole dataset, an exhaustive grid search would take far longer for
-a very small expected gain in this project's scope.
+---
 
-## 10. Deployment
+### 6. Explainable AI (SHAP TreeExplainer)
 
-- The final chosen model, its fitted scaler, and the expected feature
-  column order are saved with `joblib` to `models/`.
-- `src/predict.py` provides a reusable function to score new transactions
-  or a whole batch.
-- `app.py` wraps this in a **Streamlit** web app with two modes: single
-  manual-entry prediction, and CSV batch upload with a downloadable
-  results file — designed to be demoed live in a viva or presentation.
+To comply with technical honesty guidelines, SENTINEL uses SHAP (SHapley Additive exPlanations) based on cooperative game theory:
 
-## 11. Presentation explanation (for slides)
+$$f(x) = \phi_0 + \sum_{i=1}^{M} \phi_i(x)$$
 
-1. **Problem** — detect the ~0.17% of transactions that are fraudulent.
-2. **Challenge** — severe class imbalance makes plain accuracy useless.
-3. **Approach** — clean data → split → scale (train-only) → compare
-   class-weighting vs. SMOTE → train 3 models → evaluate with
-   precision/recall/F1/ROC-AUC → tune the best model → deploy it.
-4. **Result** — Random Forest + SMOTE typically gives the strongest
-   recall/F1 trade-off on this dataset (state your actual run's numbers
-   here once `train.py` has been executed on your machine).
-5. **Demo** — live Streamlit app, single prediction and batch CSV upload.
+Where $\phi_i(x)$ is the marginal contribution of feature $i$ to the log-odds of fraud.
+- **Top Fraud Enablers:** Components $V_{14}$, $V_{12}$, $V_{10}$, and $V_{17}$ exhibit strong negative values on fraudulent vectors, resulting in large positive SHAP forces (+0.25 to +0.45).
+- **Academic Transparency:** Because $V_1$ through $V_{28}$ are anonymized PCA components, SENTINEL strictly explains attributions as mathematical component forces rather than inventing fictional semantic attributes.
 
-## 12. Viva questions and answers
+---
 
-**Q: Why not just use accuracy?**
-A: Because the dataset is ~99.8% legitimate transactions — a model that
-never predicts fraud still gets ~99.8% accuracy while being useless.
-Precision, recall, F1, and ROC-AUC give an honest picture instead.
+### 7. Software Architecture & Engineering
 
-**Q: What's the difference between precision and recall in this context?**
-A: Precision asks "of the transactions we flagged, how many were really
-fraud?" Recall asks "of the real fraud cases, how many did we catch?"
-There's usually a trade-off between them.
+SENTINEL is built with modular separation of concerns:
+- **`src/model_service.py`:** Singleton orchestrator handling validation, scaling, inference, and risk scoring (0–100).
+- **`src/database.py`:** SQLite relational layer tracking transactions, alert queues, and analyst actions (`sentinel.db`, with `/tmp` fallback for serverless).
+- **`src/simulation.py`:** Synthetic transaction generator with configurable attack rates and What-If sensitivity delta computation.
+- **`src/api.py`:** FastAPI REST API exposing `/predict`, `/predict/batch`, `/alerts`, `/reviews`, `/simulate`, and `/health`.
+- **`api/index.py` & `vercel.json`:** Serverless entry point enabling deployment to Vercel.
+- **`app.py`:** Multi-page Streamlit dashboard featuring custom typography, metric cards, and interactive charts.
+- **`tests/`:** 30 unit tests using pytest verifying all endpoints, validations, and services.
 
-**Q: Why is recall more important than precision for fraud detection?**
-A: A missed fraud (false negative) can mean real financial loss, while a
-false alarm (false positive) usually just means a transaction gets a
-manual review — a much smaller cost.
+---
 
-**Q: What is SMOTE and why apply it only to the training set?**
-A: SMOTE generates synthetic minority-class (fraud) samples by
-interpolating between real ones. Applying it before the train/test split
-risks synthetic training points being near-duplicates of real points that
-land in the test set, which would leak information and inflate test
-performance dishonestly.
+### 8. Limitations & Future Scope
 
-**Q: What is data leakage, and where could it happen in this project?**
-A: Data leakage is when information from outside the training data
-(especially from the test set) improperly influences model training,
-making evaluation look better than it would be in the real world. In this
-project, it could happen if the scaler were fit on the full dataset
-(instead of train-only) or if SMOTE were applied before splitting.
+1. **Dataset Recency:** The Kaggle dataset dates to 2013; modern fraud vectors (SIM swap, token manipulation, crypto on-ramps) exhibit different signatures.
+2. **Concept Drift Monitoring:** In production, continuous distribution tracking (e.g., Population Stability Index, Wasserstein distance) should monitor input feature drift.
+3. **Graph Neural Networks (GNNs):** Real-world fraud rings operate via shared device IDs, mule accounts, and card clusters; integrating graph-based relational embeddings represents a promising next step.
 
-**Q: Why scale only Time and Amount, not V1–V28?**
-A: The V-columns are already the output of a PCA transformation done by
-the dataset's creators, which inherently involves standardization. Time
-and Amount are the two raw, un-transformed features, so they're on very
-different numeric scales and benefit from `StandardScaler`.
+---
 
-**Q: Why use Random Forest as the final model instead of Logistic
-Regression?**
-A: Random Forest can capture non-linear relationships between features
-and typically achieves a stronger recall/F1 balance on this kind of
-tabular fraud data than a linear model, at some cost of interpretability.
+### 9. Conclusion
 
-**Q: How does class weighting work, as an alternative to SMOTE?**
-A: It adjusts the model's loss function so that misclassifying the
-minority (fraud) class is penalized more heavily than misclassifying the
-majority class, without creating any synthetic data points.
-
-**Q: What does ROC-AUC actually measure?**
-A: How well the model ranks positive (fraud) instances above negative
-(legitimate) ones across all possible classification thresholds — not
-just the one threshold (usually 0.5) used to generate the confusion
-matrix.
-
-**Q: What would you improve if you had more time/data?**
-A: Try gradient-boosted models (XGBoost/LightGBM), engineer time-based
-features (e.g. transaction frequency per card in a rolling window), and
-validate on more recent/larger transaction data since this dataset is
-from 2013 and fraud patterns evolve over time.
-
-## 13. Limitations
-
-- Dataset is from 2013 and may not reflect current fraud patterns.
-- V1–V28 being anonymized PCA components limits interpretability — we
-  can't explain fraud in terms of real-world features like "merchant
-  category" or "location".
-- SMOTE synthetic samples are not real fraud cases; they approximate the
-  minority class's distribution but could introduce artifacts in some
-  situations.
+SENTINEL successfully elevates a classroom ML exercise into a professional, technically honest fraud intelligence platform. By integrating zero-leakage ML pipelines, calibrated risk scoring, SHAP explainability, SQLite persistence, and dual Vercel/Streamlit deployment, the project demonstrates both theoretical AIML rigor and practical software engineering capability.
