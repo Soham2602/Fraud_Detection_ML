@@ -35,6 +35,12 @@ from database import (
 )
 from explainability import ExplainabilityEngine
 from simulation import SimulationEngine
+from demo_data import (
+    get_demo_scenarios,
+    get_demo_transactions,
+    get_demo_alerts,
+    get_demo_kpis,
+)
 
 from contextlib import asynccontextmanager
 
@@ -309,3 +315,29 @@ def simulate_transactions(count: int = Query(1, ge=1, le=50), fraud_bias: float 
 def simulate_what_if(payload: WhatIfInput):
     sim = SimulationEngine()
     return sim.run_what_if_analysis(payload.base_features, payload.modifications, threshold=payload.threshold)
+
+
+@app.get("/scenarios", tags=["Demonstration"])
+def get_curated_scenarios():
+    """Return the 5 curated scenario presets with pre-computed predictions."""
+    return get_demo_scenarios()
+
+
+@app.get("/demo-transactions", tags=["Demonstration"])
+def get_demo_transaction_records(limit: int = 50):
+    """Return deterministic demonstration transactions for rich dashboard views."""
+    df = get_demo_transactions()
+    return df.head(limit).to_dict(orient="records")
+
+
+@app.get("/demo-alerts", tags=["Demonstration"])
+def get_demo_alert_records(limit: int = 30):
+    """Return prioritized demonstration alert incidents."""
+    return get_demo_alerts(count=limit)
+
+
+@app.get("/demo-kpis", tags=["Demonstration"])
+def get_demo_kpi_summary():
+    """Return demonstration layer aggregate KPIs."""
+    return get_demo_kpis()
+

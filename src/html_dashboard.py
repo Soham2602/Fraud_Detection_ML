@@ -270,14 +270,19 @@ HTML_DASHBOARD = """<!DOCTYPE html>
 
                     <!-- Preset Selector -->
                     <div>
-                        <label class="block text-xs font-semibold text-slate-300 mb-1">Load Real Ground-Truth Preset</label>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Select Scenario or Kaggle Preset</label>
                         <select id="preset-selector" onchange="loadPreset(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 font-mono">
-                            <option value="0">TXN-LEGIT-138028 ($0.76 - Legitimate Retail)</option>
-                            <option value="1">TXN-LEGIT-63099 ($4.18 - Legitimate Retail)</option>
-                            <option value="2">TXN-LEGIT-73411 ($15.00 - Legitimate Retail)</option>
-                            <option value="8" selected>TXN-FRAUD-17407 ($99.99 - Confirmed Fraud Incident)</option>
-                            <option value="9">TXN-FRAUD-12369 ($1.00 - Micro-Probing Fraud Incident)</option>
-                            <option value="13">TXN-FRAUD-74794 ($311.91 - High-Dollar Fraud Incident)</option>
+                            <optgroup label="🎭 5 Curated Scenarios">
+                                <option value="0">Scenario A: Low-Risk Everyday Grocery ($28.50 - Approved)</option>
+                                <option value="1">Scenario B: Moderate-Risk Online Electronics ($385.00 - Elevated)</option>
+                                <option value="2" selected>Scenario C: High-Risk International Travel ($1,420.00 - Flagged)</option>
+                                <option value="3">Scenario D: Critical Micro-Auth Testing ($1.00 - Critical Block)</option>
+                                <option value="4">Scenario E: Borderline Case ($115.00 - Threshold Sensitive)</option>
+                            </optgroup>
+                            <optgroup label="📂 Kaggle Benchmark Ground-Truth">
+                                <option value="5">Kaggle Legit (#138028, $0.76)</option>
+                                <option value="6">Kaggle Fraud (#17407, $99.99)</option>
+                            </optgroup>
                         </select>
                         <div id="preset-gt-badge" class="mt-2 text-xs font-bold font-mono text-rose-400">🚨 GROUND TRUTH: FRAUDULENT</div>
                     </div>
@@ -299,14 +304,14 @@ HTML_DASHBOARD = """<!DOCTYPE html>
                         <div>
                             <div class="flex justify-between text-xs font-mono text-slate-400">
                                 <span>V14 (Leading Predictor)</span>
-                                <span id="v14-val">-4.289</span>
+                                <span id="v14-val">-5.600</span>
                             </div>
-                            <input type="range" id="input-v14" min="-10" max="5" step="0.1" oninput="document.getElementById('v14-val').textContent=this.value; currentVector.V14=parseFloat(this.value);" class="w-full h-1.5 bg-slate-800 rounded appearance-none cursor-pointer accent-blue-500">
+                            <input type="range" id="input-v14" min="-12" max="5" step="0.1" oninput="document.getElementById('v14-val').textContent=this.value; currentVector.V14=parseFloat(this.value);" class="w-full h-1.5 bg-slate-800 rounded appearance-none cursor-pointer accent-blue-500">
                         </div>
                         <div>
                             <div class="flex justify-between text-xs font-mono text-slate-400">
                                 <span>V10 (Risk Elevator)</span>
-                                <span id="v10-val">-2.772</span>
+                                <span id="v10-val">-4.100</span>
                             </div>
                             <input type="range" id="input-v10" min="-10" max="5" step="0.1" oninput="document.getElementById('v10-val').textContent=this.value; currentVector.V10=parseFloat(this.value);" class="w-full h-1.5 bg-slate-800 rounded appearance-none cursor-pointer accent-blue-500">
                         </div>
@@ -325,19 +330,29 @@ HTML_DASHBOARD = """<!DOCTYPE html>
                                 <span class="provenance-tag tag-model">MODEL OUTPUT</span>
                                 <h3 class="text-base font-bold text-slate-100 mt-1">Calibrated Risk Assessment</h3>
                             </div>
-                            <span id="res-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">CRITICAL RISK</span>
+                            <span id="res-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30">HIGH RISK</span>
                         </div>
 
                         <!-- Gauge Visual -->
                         <div class="flex items-center justify-between p-4 bg-slate-900/80 rounded-xl border border-slate-800">
                             <div>
-                                <div class="text-3xl font-extrabold font-mono text-slate-100" id="res-score">82 <span class="text-sm font-normal text-slate-400">/ 100</span></div>
-                                <div class="text-xs text-slate-400 mt-0.5" id="res-prob">Fraud Confidence: 82.0%</div>
+                                <div class="text-3xl font-extrabold font-mono text-slate-100" id="res-score">78 <span class="text-sm font-normal text-slate-400">/ 100</span></div>
+                                <div class="text-xs text-slate-400 mt-0.5" id="res-prob">Fraud Confidence: 78.0%</div>
                             </div>
                             <div class="text-right">
                                 <div id="res-decision" class="text-sm font-bold font-mono text-rose-400">🚨 FLAGGED FOR REVIEW</div>
                                 <div class="text-[11px] text-slate-500 mt-0.5">Threshold: 0.50 Cutoff</div>
                             </div>
+                        </div>
+
+                        <!-- Mathematical Decision Pipeline -->
+                        <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] font-mono space-y-1">
+                            <div class="text-slate-400 font-bold">📐 Mathematical Decision Pipeline:</div>
+                            <div class="text-slate-300">1. Vector Ingestion: Amount = <span id="math-amt">$1,420.00</span>, Time = <span id="math-time">14400s</span></div>
+                            <div class="text-slate-300">2. Normalization: Robust StandardScaler (<span class="text-blue-400">&mu;, &sigma;</span>)</div>
+                            <div class="text-slate-300">3. Ensemble Voting: 100 Trees Random Forest</div>
+                            <div class="text-slate-300">4. Posterior Probability: <span id="math-prob" class="text-amber-400 font-bold">P(Fraud|X) = 0.7800</span></div>
+                            <div class="text-slate-300">5. Decision Rule: <span id="math-rule" class="text-rose-400 font-bold">0.7800 &ge; 0.50 &rArr; FLAGGED</span></div>
                         </div>
 
                         <!-- SHAP Attributions -->
@@ -508,10 +523,52 @@ HTML_DASHBOARD = """<!DOCTYPE html>
         <!-- ============================================================= -->
         <div id="tab-explorer" class="tab-pane hidden space-y-6">
             <div class="glass-card p-6 rounded-2xl">
-                <h2 class="text-xl font-extrabold text-white">🗂 Transaction Vault Explorer</h2>
-                <p class="text-xs text-slate-400 mt-1">Query, audit, and inspect transactions stored in SQLite database.</p>
-                <div class="mt-4 text-xs font-mono text-slate-300">
-                    Showing latest 50 records from sentinel.db vault.
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div>
+                        <span class="provenance-tag" style="background:rgba(236,72,153,0.15);color:#f472b6;border:1px solid rgba(236,72,153,0.3);">SYNTHETIC DEMO LAYER</span>
+                        <h2 class="text-xl font-extrabold text-white mt-1">🗂 Transaction Vault Explorer</h2>
+                        <p class="text-xs text-slate-400">Deterministic 500-record synthetic transaction dataset. Every score is real ML inference.</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-mono text-sm text-pink-400 font-bold" id="explorer-count">500</div>
+                        <div class="text-[11px] text-slate-500">Records Loaded</div>
+                    </div>
+                </div>
+                <!-- Filters -->
+                <div class="flex gap-3 mt-4 flex-wrap">
+                    <select id="filter-risk" onchange="filterExplorer()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1.5 font-mono">
+                        <option value="ALL">All Risk Levels</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="LOW">LOW</option>
+                    </select>
+                    <select id="filter-flag" onchange="filterExplorer()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1.5 font-mono">
+                        <option value="ALL">All Verdicts</option>
+                        <option value="FLAGGED">Flagged Only</option>
+                        <option value="APPROVED">Approved Only</option>
+                    </select>
+                    <input id="filter-search" onkeyup="filterExplorer()" type="text" placeholder="Search TXN ID or channel..." class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1.5 font-mono w-48">
+                </div>
+
+                <div class="overflow-x-auto mt-4">
+                    <table class="w-full text-left text-xs font-mono text-slate-300">
+                        <thead class="bg-slate-900/90 text-slate-400 border-b border-slate-800">
+                            <tr>
+                                <th class="p-2.5">TXN ID</th>
+                                <th class="p-2.5">Timestamp</th>
+                                <th class="p-2.5">Amount</th>
+                                <th class="p-2.5">Channel</th>
+                                <th class="p-2.5">Risk Score</th>
+                                <th class="p-2.5">Risk Level</th>
+                                <th class="p-2.5">Verdict</th>
+                                <th class="p-2.5">Provenance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="explorer-tbody" class="divide-y divide-slate-800/60">
+                            <tr><td colspan="8" class="p-4 text-center text-slate-500">Loading transactions...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -742,6 +799,12 @@ HTML_DASHBOARD = """<!DOCTYPE html>
             currentVector.Time = parseFloat(document.getElementById('input-time').value) || 0.0;
             currentVector.save_to_db = true;
 
+            // Update math pipeline display
+            const amt = currentVector.Amount;
+            const tim = currentVector.Time;
+            if (document.getElementById('math-amt')) document.getElementById('math-amt').textContent = formatMoney(amt);
+            if (document.getElementById('math-time')) document.getElementById('math-time').textContent = tim.toFixed(0) + 's';
+
             try {
                 const res = await fetch('/predict', {
                     method: 'POST',
@@ -757,6 +820,31 @@ HTML_DASHBOARD = """<!DOCTYPE html>
                 document.getElementById('res-decision').textContent = isFraud ? '🚨 FLAGGED FOR REVIEW' : '✅ APPROVED LEGITIMATE';
                 document.getElementById('res-decision').className = `text-sm font-bold font-mono ${isFraud ? 'text-rose-400' : 'text-emerald-400'}`;
 
+                // Update Mathematical Decision Pipeline
+                const prob = data.fraud_probability.toFixed(4);
+                const threshold = 0.50;
+                if (document.getElementById('math-prob')) {
+                    document.getElementById('math-prob').textContent = `P(Fraud|X) = ${prob}`;
+                }
+                if (document.getElementById('math-rule')) {
+                    const cmp = data.fraud_probability >= threshold ? '>=' : '<';
+                    const verdict = isFraud ? 'FLAGGED' : 'APPROVED';
+                    document.getElementById('math-rule').textContent = `${prob} ${cmp} ${threshold} ⇒ ${verdict}`;
+                    document.getElementById('math-rule').className = `font-bold ${isFraud ? 'text-rose-400' : 'text-emerald-400'}`;
+                }
+
+                // Update risk badge
+                const badge = document.getElementById('res-badge');
+                if (badge) {
+                    const rl = data.risk_level;
+                    const badgeColor = rl === 'CRITICAL' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+                                       rl === 'HIGH'     ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                                       rl === 'MEDIUM'   ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                                           'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+                    badge.className = `px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeColor}`;
+                    badge.textContent = `${rl} RISK`;
+                }
+
                 // XAI Explanation
                 const xaiRes = await fetch('/explain', {
                     method: 'POST',
@@ -767,14 +855,16 @@ HTML_DASHBOARD = """<!DOCTYPE html>
                     const xai = await xaiRes.json();
                     document.getElementById('res-narrative').innerHTML = `<b>Attribution Analysis:</b> ${xai.narrative}`;
                     const barContainer = document.getElementById('res-force-bars');
-                    barContainer.innerHTML = (xai.top_features || []).slice(0, 5).map(f => {
-                        const isPos = f.contribution > 0;
-                        const width = Math.min(Math.abs(f.contribution) * 100, 100);
+                    barContainer.innerHTML = (xai.top_features || []).slice(0, 6).map(f => {
+                        const isPos = f.shap_value > 0 || f.contribution > 0;
+                        const shap = f.shap_value || f.contribution || 0;
+                        const width = Math.min(Math.abs(shap) * 100, 100);
+                        const rawVal = f.raw_value !== undefined ? f.raw_value : '';
                         return `
                         <div class="text-xs">
                             <div class="flex justify-between font-mono text-[11px]">
-                                <span class="text-slate-300">${f.feature} (val: ${f.raw_value})</span>
-                                <span class="${isPos ? 'text-rose-400' : 'text-emerald-400'}">${isPos ? '+' : ''}${f.contribution.toFixed(3)}</span>
+                                <span class="text-slate-300">${f.feature} ${rawVal !== '' ? '(' + parseFloat(rawVal).toFixed(3) + ')' : ''}</span>
+                                <span class="${isPos ? 'text-rose-400' : 'text-emerald-400'}">${isPos ? '+' : ''}${shap.toFixed(4)}</span>
                             </div>
                             <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden mt-0.5">
                                 <div class="${isPos ? 'bg-rose-500' : 'bg-emerald-500'} h-full rounded-full" style="width: ${width}%"></div>
@@ -789,25 +879,135 @@ HTML_DASHBOARD = """<!DOCTYPE html>
             }
         }
 
+        // All 500 demo transactions for explorer
+        let allExplorerRecords = [];
+
+        function renderExplorerTable(records) {
+            const tbody = document.getElementById('explorer-tbody');
+            if (!tbody) return;
+            if (!records.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-center text-slate-500">No records match the filter.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = records.slice(0, 100).map(t => {
+                const isFlagged = t.is_flagged === true || t.is_flagged === 1;
+                const rl = t.risk_level || 'LOW';
+                const badgeColor = rl === 'CRITICAL' ? 'text-rose-400' : rl === 'HIGH' ? 'text-orange-400' : rl === 'MEDIUM' ? 'text-amber-400' : 'text-emerald-400';
+                return `<tr class="hover:bg-slate-800/30 transition-colors">
+                    <td class="p-2.5 text-blue-400">${t.id || t.transaction_id || '-'}</td>
+                    <td class="p-2.5 text-slate-400">${(t.timestamp || '').slice(0, 19)}</td>
+                    <td class="p-2.5 text-slate-200">${formatMoney(t.amount || t.Amount || 0)}</td>
+                    <td class="p-2.5 text-slate-400">${t.channel || '-'}</td>
+                    <td class="p-2.5 font-bold text-slate-100">${t.risk_score || 0}</td>
+                    <td class="p-2.5 font-bold ${badgeColor}">${rl}</td>
+                    <td class="p-2.5 ${isFlagged ? 'text-rose-400 font-bold' : 'text-emerald-400'}">${isFlagged ? '🚨 FLAGGED' : '✅ APPROVED'}</td>
+                    <td class="p-2.5"><span style="font-size:10px;background:rgba(236,72,153,0.15);color:#f472b6;border:1px solid rgba(236,72,153,0.3);padding:1px 5px;border-radius:3px;">DEMO</span></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function filterExplorer() {
+            const riskFilter = document.getElementById('filter-risk')?.value || 'ALL';
+            const flagFilter = document.getElementById('filter-flag')?.value || 'ALL';
+            const search = (document.getElementById('filter-search')?.value || '').toLowerCase();
+
+            let filtered = allExplorerRecords.filter(t => {
+                const rl = (t.risk_level || '').toUpperCase();
+                const isFlagged = t.is_flagged === true || t.is_flagged === 1;
+                const idStr = (t.id || t.transaction_id || '').toLowerCase();
+                const ch = (t.channel || '').toLowerCase();
+
+                if (riskFilter !== 'ALL' && rl !== riskFilter) return false;
+                if (flagFilter === 'FLAGGED' && !isFlagged) return false;
+                if (flagFilter === 'APPROVED' && isFlagged) return false;
+                if (search && !idStr.includes(search) && !ch.includes(search)) return false;
+                return true;
+            });
+            const countEl = document.getElementById('explorer-count');
+            if (countEl) countEl.textContent = filtered.length;
+            renderExplorerTable(filtered);
+        }
+
+        async function loadExplorerData() {
+            try {
+                const r = await fetch('/demo-transactions?limit=500');
+                if (r.ok) {
+                    allExplorerRecords = await r.json();
+                    filterExplorer();
+                }
+            } catch (e) { console.error('Explorer load error:', e); }
+        }
+
+        async function loadAlertsTable() {
+            try {
+                const r = await fetch('/demo-alerts?limit=30');
+                if (r.ok) {
+                    const alerts = await r.json();
+                    const tbody = document.getElementById('alerts-tbody');
+                    if (!tbody) return;
+                    tbody.innerHTML = alerts.map(a => {
+                        const rl = a.risk_level || 'LOW';
+                        const badgeColor = rl === 'CRITICAL' ? 'text-rose-400' : rl === 'HIGH' ? 'text-orange-400' : rl === 'MEDIUM' ? 'text-amber-400' : 'text-emerald-400';
+                        return `<tr class="hover:bg-slate-800/30">
+                            <td class="p-3">#${a.id}</td>
+                            <td class="p-3 text-blue-400">${a.transaction_id}</td>
+                            <td class="p-3 font-bold ${badgeColor}">${rl}</td>
+                            <td class="p-3">${(a.fraud_probability * 100).toFixed(1)}%</td>
+                            <td class="p-3 text-slate-400">${a.status || 'Open'}</td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 cursor-pointer">
+                                    Investigate →
+                                </span>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                }
+            } catch (e) { console.error('Alerts load error:', e); }
+        }
+
         // Initialize on load
         window.addEventListener('DOMContentLoaded', async () => {
             initCharts();
+
+            // Load 5 scenarios + 2 Kaggle presets from API
             try {
-                const res = await fetch('/presets.json');
-                // Fallback default presets if presets.json endpoint not mounted
-                presets = [
-                    { id: "TXN-LEGIT-138028", name: "Legitimate Retail ($0.76)", actual_class: 0, amount: 0.76, time: 82450.0, features: { Time: 82450.0, Amount: 0.76, V1: 1.314, V2: 0.590, V3: -0.666, V4: 0.716, V14: -1.054, V10: -0.597, V12: -0.216, V17: 0.631 } },
-                    { id: "TXN-LEGIT-63099", name: "Legitimate Retail ($4.18)", actual_class: 0, amount: 4.18, time: 50554.0, features: { Time: 50554.0, Amount: 4.18, V1: -0.798, V2: 1.185, V3: 0.904, V4: 0.694, V14: -0.219, V10: 0.170, V12: 0.380, V17: -0.198 } },
-                    { id: "TXN-LEGIT-73411", name: "Legitimate Retail ($15.00)", actual_class: 0, amount: 15.0, time: 55120.0, features: { Time: 55120.0, Amount: 15.0, V1: 1.250, V2: 0.350, V3: 0.300, V4: 0.690, V14: 0.050, V10: -0.120, V12: 0.220, V17: -0.050 } },
-                    { id: "TXN-FRAUD-17407", name: "High-Risk Fraud ($99.99)", actual_class: 1, amount: 99.99, time: 406.0, features: { Time: 406.0, Amount: 99.99, V1: -2.312, V2: 1.951, V3: -1.609, V4: 3.997, V14: -4.289, V10: -2.772, V12: -2.899, V17: -2.830 } },
-                    { id: "TXN-FRAUD-12369", name: "Micro-Probing Fraud ($1.00)", actual_class: 1, amount: 1.0, time: 21530.0, features: { Time: 21530.0, Amount: 1.0, V1: -3.043, V2: -3.157, V3: 1.088, V4: 2.288, V14: -4.102, V10: -1.890, V12: -2.140, V17: -2.500 } },
-                    { id: "TXN-FRAUD-74794", name: "High-Dollar Fraud ($311.91)", actual_class: 1, amount: 311.91, time: 55800.0, features: { Time: 55800.0, Amount: 311.91, V1: -4.397, V2: 1.358, V3: -2.592, V4: 2.679, V14: -5.480, V10: -3.120, V12: -3.890, V17: -4.110 } }
-                ];
-                loadPreset(3); // Load fraud preset by default
+                const scRes = await fetch('/scenarios');
+                if (scRes.ok) {
+                    const scenariosObj = await scRes.json();
+                    const scenarioList = Object.values(scenariosObj);
+                    // Map to presets array: indices 0-4 are scenarios, 5-6 are Kaggle
+                    presets = scenarioList.map(s => ({
+                        id: s.scenario_id,
+                        name: s.title,
+                        actual_class: s.expected_verdict && s.expected_verdict.includes('APPROVED') ? 0 : 1,
+                        amount: s.features.Amount,
+                        time: s.features.Time,
+                        features: s.features
+                    }));
+                    // Append Kaggle presets
+                    presets.push({ id: "TXN-LEGIT-138028", name: "Kaggle Legit ($0.76)", actual_class: 0, amount: 0.76, time: 82450.0, features: { Time: 82450.0, Amount: 0.76, V1: 1.314, V2: 0.590, V3: -0.666, V4: 0.716, V5: 0.302, V6: -1.125, V7: 0.389, V8: -0.288, V9: -0.132, V10: -0.597, V11: -0.325, V12: -0.216, V13: 0.084, V14: -1.054, V15: 0.968, V16: 0.601, V17: 0.631, V18: 0.295, V19: -0.136, V20: -0.058, V21: -0.170, V22: -0.430, V23: -0.141, V24: -0.200, V25: 0.639, V26: 0.399, V27: -0.034, V28: 0.032 } });
+                    presets.push({ id: "TXN-FRAUD-17407", name: "Kaggle Fraud ($99.99)", actual_class: 1, amount: 99.99, time: 406.0, features: { Time: 406.0, Amount: 99.99, V1: -2.312, V2: 1.951, V3: -1.609, V4: 3.997, V5: -0.522, V6: -1.426, V7: -2.537, V8: 1.391, V9: -2.770, V10: -2.772, V11: 3.202, V12: -2.899, V13: -0.595, V14: -4.289, V15: 0.389, V16: -1.141, V17: -2.830, V18: -0.016, V19: 0.417, V20: 0.126, V21: 0.517, V22: -0.035, V23: -0.465, V24: 0.320, V25: 0.045, V26: 0.177, V27: 0.261, V28: -0.143 } });
+                    loadPreset(2); // Default to Scenario C (High-Risk)
+                } else {
+                    throw new Error('No scenarios endpoint');
+                }
             } catch (e) {
-                console.error(e);
+                console.warn('Using fallback presets:', e);
+                presets = [
+                    { id: "SCN-A", name: "Low-Risk Grocery", actual_class: 0, amount: 28.50, time: 43200.0, features: { Time: 43200.0, Amount: 28.50, V1: 0.12, V2: -0.05, V3: 0.85, V4: -0.32, V5: 0.15, V6: -0.22, V7: 0.35, V8: 0.05, V9: 0.18, V10: 0.25, V11: -0.40, V12: 0.30, V13: 0.12, V14: 0.45, V15: 0.60, V16: 0.20, V17: 0.35, V18: 0.10, V19: -0.15, V20: -0.05, V21: -0.08, V22: 0.15, V23: -0.02, V24: 0.10, V25: -0.12, V26: 0.05, V27: 0.02, V28: 0.01 } },
+                    { id: "SCN-B", name: "Electronics Online", actual_class: 1, amount: 385.00, time: 79200.0, features: { Time: 79200.0, Amount: 385.00, V1: -1.25, V2: 0.85, V3: -0.45, V4: 1.45, V5: -0.55, V6: -0.35, V7: -0.80, V8: 0.40, V9: -0.65, V10: -0.95, V11: 0.85, V12: -1.10, V13: -0.30, V14: -2.20, V15: 0.10, V16: -0.75, V17: -1.30, V18: -0.40, V19: 0.65, V20: 0.25, V21: 0.18, V22: 0.35, V23: -0.12, V24: 0.05, V25: 0.20, V26: 0.35, V27: 0.15, V28: -0.05 } },
+                    { id: "SCN-C", name: "High-Risk Travel", actual_class: 1, amount: 1420.00, time: 14400.0, features: { Time: 14400.0, Amount: 1420.00, V1: -3.85, V2: 2.65, V3: -4.20, V4: 3.10, V5: -2.50, V6: -1.40, V7: -3.60, V8: 1.85, V9: -2.40, V10: -4.10, V11: 3.20, V12: -4.80, V13: -0.10, V14: -5.60, V15: -0.40, V16: -3.10, V17: -5.20, V18: -1.80, V19: 1.10, V20: 0.65, V21: 0.68, V22: -0.25, V23: 0.15, V24: -0.30, V25: 0.35, V26: 0.45, V27: 0.85, V28: -0.18 } },
+                    { id: "SCN-D", name: "Critical Micro-Auth", actual_class: 1, amount: 1.00, time: 85285.0, features: { Time: 85285.0, Amount: 1.00, V1: -7.03, V2: 3.42, V3: -9.53, V4: 5.27, V5: -4.02, V6: -2.87, V7: -6.99, V8: 3.79, V9: -4.62, V10: -8.41, V11: 6.31, V12: -8.58, V13: 0.25, V14: -11.53, V15: -0.36, V16: -5.45, V17: -11.89, V18: -3.56, V19: 0.88, V20: 0.55, V21: 1.10, V22: -0.54, V23: 0.04, V24: -0.36, V25: 0.35, V26: 1.04, V27: 1.36, V28: -0.27 } },
+                    { id: "SCN-E", name: "Borderline Case", actual_class: 1, amount: 115.00, time: 50554.0, features: { Time: 50554.0, Amount: 115.00, V1: -1.80, V2: 1.45, V3: -1.20, V4: 1.85, V5: -0.90, V6: -0.60, V7: -1.25, V8: 0.70, V9: -1.15, V10: -1.65, V11: 1.35, V12: -1.95, V13: 0.15, V14: -2.85, V15: -0.10, V16: -1.40, V17: -2.10, V18: -0.85, V19: 0.45, V20: 0.30, V21: 0.32, V22: 0.15, V23: -0.05, V24: -0.15, V25: 0.18, V26: 0.22, V27: 0.25, V28: 0.05 } },
+                    { id: "TXN-LEGIT-138028", name: "Kaggle Legit ($0.76)", actual_class: 0, amount: 0.76, time: 82450.0, features: { Time: 82450.0, Amount: 0.76, V1: 1.314, V2: 0.590, V3: -0.666, V4: 0.716, V5: 0.302, V6: -1.125, V7: 0.389, V8: -0.288, V9: -0.132, V10: -0.597, V11: -0.325, V12: -0.216, V13: 0.084, V14: -1.054, V15: 0.968, V16: 0.601, V17: 0.631, V18: 0.295, V19: -0.136, V20: -0.058, V21: -0.170, V22: -0.430, V23: -0.141, V24: -0.200, V25: 0.639, V26: 0.399, V27: -0.034, V28: 0.032 } },
+                    { id: "TXN-FRAUD-17407", name: "Kaggle Fraud ($99.99)", actual_class: 1, amount: 99.99, time: 406.0, features: { Time: 406.0, Amount: 99.99, V1: -2.312, V2: 1.951, V3: -1.609, V4: 3.997, V5: -0.522, V6: -1.426, V7: -2.537, V8: 1.391, V9: -2.770, V10: -2.772, V11: 3.202, V12: -2.899, V13: -0.595, V14: -4.289, V15: 0.389, V16: -1.141, V17: -2.830, V18: -0.016, V19: 0.417, V20: 0.126, V21: 0.517, V22: -0.035, V23: -0.465, V24: 0.320, V25: 0.045, V26: 0.177, V27: 0.261, V28: -0.143 } }
+                ];
+                loadPreset(2); // Default to Scenario C
             }
+
             fetchKPIsAndFeed();
+            loadAlertsTable();
+            loadExplorerData();
         });
     </script>
 </body>

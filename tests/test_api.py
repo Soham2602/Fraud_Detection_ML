@@ -118,3 +118,31 @@ def test_risk_score_determinism(presets):
     sample = presets[0]["features"]
     scores = [service.predict_single(sample)["risk_score"] for _ in range(5)]
     assert len(set(scores)) == 1, f"Risk scoring must be strictly deterministic across calls: {scores}"
+
+
+def test_demo_api_endpoints(client):
+    # Test /scenarios
+    resp = client.get("/scenarios")
+    assert resp.status_code == 200
+    scenarios = resp.json()
+    assert len(scenarios) == 5
+
+    # Test /demo-transactions
+    resp_tx = client.get("/demo-transactions?limit=10")
+    assert resp_tx.status_code == 200
+    txns = resp_tx.json()
+    assert len(txns) == 10
+    assert "risk_score" in txns[0]
+
+    # Test /demo-alerts
+    resp_al = client.get("/demo-alerts?limit=5")
+    assert resp_al.status_code == 200
+    alerts = resp_al.json()
+    assert len(alerts) == 5
+
+    # Test /demo-kpis
+    resp_kp = client.get("/demo-kpis")
+    assert resp_kp.status_code == 200
+    kpis = resp_kp.json()
+    assert kpis["total_transactions"] == 500
+

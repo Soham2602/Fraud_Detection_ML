@@ -5,21 +5,22 @@ SENTINEL — Fraud Intelligence Platform
 High-Performance, Interactive Streamlit Operations Center.
 
 Architecture:
-- Native Plotly interactive visual analytics (hover, zoom, pan, download)
-- Strict Data Provenance labeling (REAL DATASET vs EVALUATION DATA vs STORED IN VAULT vs LIVE SIMULATION)
+- Native Plotly interactive visual analytics (hover, zoom, pan, export)
+- Strict Data Provenance labeling (REAL DATASET vs EVALUATION DATA vs STORED IN VAULT vs SYNTHETIC DEMO)
+- Global Data Mode Switch: REAL DATA | DEMO DATA | COMBINED VIEW
 - 10 Dedicated Security & Operations Modules:
-  1. 🏠 Command Center
-  2. 📊 Dataset Intelligence
-  3. 🔎 Transaction Investigation
-  4. 🚨 Fraud Alerts
-  5. 📈 Model Intelligence
-  6. 🧠 Explainable AI
-  7. ⚡ Live Simulation
-  8. 🔬 What-If Analysis
-  9. 🗂 Transaction Explorer
-  10. ⚙️ System & Model
+  1. 🏠 Command Center (High-level operations & triage)
+  2. 📊 Dataset Intelligence (Ground-truth EDA & distributions)
+  3. 🔎 Transaction Investigation (Inline ML, Mathematical Decision Logic & SHAP XAI)
+  4. 🚨 Fraud Alerts (Triage queue & case management)
+  5. 📈 Model Intelligence (ROC/PR curves, Threshold Playground, Metrics)
+  6. 🧠 Explainable AI (SHAP TreeExplainer & feature attribution)
+  7. ⚡ Live Simulation (Synthetic stream generator)
+  8. 🔬 What-If Analysis (Sensitivity perturbation engine)
+  9. 🗂 Transaction Explorer (Search, filter, and audit vault)
+  10. ⚙️ System & Model (Architecture, telemetry & diagnostics)
 - Calibrated Deterministic Risk Scoring (0–100) & Visual Segmented Gauge
-- Anonymized PCA-Honest Explainable AI (SHAP force breakdown)
+- Anonymized PCA-Honest Explainable AI (Directional SHAP force breakdown)
 - Single Canonical ModelService Backend
 """
 
@@ -31,6 +32,8 @@ from typing import Dict, Any, List, Optional
 
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
 import streamlit as st
 
 # Ensure src is on python path
@@ -65,6 +68,15 @@ from database import (
 )
 from explainability import ExplainabilityEngine
 from simulation import SimulationEngine
+from demo_data import (
+    DEMO_SCENARIOS,
+    get_demo_scenarios,
+    get_demo_transactions,
+    get_demo_alerts,
+    get_demo_kpis,
+    get_demo_channel_breakdown,
+    get_demo_category_breakdown,
+)
 from visualizations import (
     plot_class_imbalance,
     plot_amount_distribution,
@@ -141,6 +153,7 @@ st.markdown("""
     .tag-model { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
     .tag-vault { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
     .tag-sim { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .tag-demo { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
 
     .metric-val {
         font-family: 'JetBrains Mono', monospace;
@@ -170,6 +183,44 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
+    /* Mode Banner */
+    .mode-banner-demo {
+        background: rgba(236, 72, 153, 0.08);
+        border: 1px solid rgba(236, 72, 153, 0.3);
+        border-radius: 8px;
+        padding: 8px 14px;
+        margin-bottom: 16px;
+        font-size: 0.80rem;
+        color: #f472b6;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .mode-banner-real {
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        padding: 8px 14px;
+        margin-bottom: 16px;
+        font-size: 0.80rem;
+        color: #60a5fa;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .mode-banner-comb {
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        border-radius: 8px;
+        padding: 8px 14px;
+        margin-bottom: 16px;
+        font-size: 0.80rem;
+        color: #34d399;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     /* System Status Badges */
     .status-badge {
         display: inline-flex;
@@ -186,6 +237,7 @@ st.markdown("""
     }
     .dot-green { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
     .dot-amber { width: 7px; height: 7px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+    .dot-pink { width: 7px; height: 7px; border-radius: 50%; background: #ec4899; box-shadow: 0 0 8px #ec4899; }
 
     /* Custom Risk Badges */
     .risk-badge-low { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; padding: 2px 8px; border-radius: 4px; }
@@ -260,6 +312,8 @@ if "simulation_history" not in st.session_state:
     st.session_state.simulation_history = []
 if "last_evaluated" not in st.session_state:
     st.session_state.last_evaluated = None
+if "data_mode" not in st.session_state:
+    st.session_state.data_mode = "DEMO DATA (Curated 500 TXNs)"
 
 
 # -----------------------------------------------------------------------------
@@ -317,20 +371,26 @@ with st.sidebar:
 
     st.markdown("<hr style='border-color: rgba(255,255,255,0.08); margin: 16px 0;'>", unsafe_allow_html=True)
 
-    # 2. Global Data Source Indicator
-    st.markdown("<div style='font-size:0.70rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;'>Active Data Source</div>", unsafe_allow_html=True)
-    source_choice = st.selectbox(
-        "Data Source",
-        ["REAL DATASET (284,807 Kaggle TXNs)", "STORED IN VAULT (SQLite DB)", "LIVE SIMULATION (Synthetic Stream)"],
+    # 2. Global Data Mode Selector (Master Feature)
+    st.markdown("<div style='font-size:0.70rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;'>Global Data Mode</div>", unsafe_allow_html=True)
+    mode_options = [
+        "DEMO DATA (Curated 500 TXNs)",
+        "REAL DATA (284k Kaggle Benchmark)",
+        "COMBINED VIEW (Unified Telemetry)",
+    ]
+    active_mode = st.selectbox(
+        "Select Data Mode",
+        mode_options,
+        index=mode_options.index(st.session_state.data_mode) if st.session_state.data_mode in mode_options else 0,
         label_visibility="collapsed",
     )
+    st.session_state.data_mode = active_mode
 
     # 3. Visualization Controls
     st.markdown("<div style='font-size:0.70rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-top:14px; margin-bottom:6px;'>Display Controls</div>", unsafe_allow_html=True)
     show_advanced_charts = st.toggle("Show Advanced Analytics", value=True)
     show_explanations = st.toggle("Show Model Explanations", value=True)
     show_raw_features = st.toggle("Show Raw PCA Features", value=False)
-    analyst_mode = st.toggle("Engineering Mode (Technical)", value=False)
     currency_toggle = st.selectbox("Currency Format", ["$ USD", "₹ INR (Demo Layer)"], index=0)
     active_currency = "$ USD" if "USD" in currency_toggle else "₹ INR"
 
@@ -339,12 +399,14 @@ with st.sidebar:
     # 4. System Telemetry
     service_ref = get_service()
     db_kpis = get_dashboard_kpis()
+    demo_kpis = get_demo_kpis()
     st.markdown(f"""
     <div style="font-size: 0.72rem; color: #94a3b8; space-y-1;">
         <div><b>Model:</b> <span class="font-mono text-blue-400">Tuned Random Forest</span></div>
         <div><b>Threshold:</b> <span class="font-mono text-amber-400">{DEFAULT_THRESHOLD:.2f}</span></div>
         <div><b>Vault Records:</b> <span class="font-mono text-emerald-400">{db_kpis.get('total_transactions', 0):,}</span></div>
-        <div><b>Open Alerts:</b> <span class="font-mono text-rose-400">{db_kpis.get('open_alerts', 0):,}</span></div>
+        <div><b>Demo Records:</b> <span class="font-mono text-pink-400">{demo_kpis.get('total_transactions', 500):,}</span></div>
+        <div><b>Open Alerts:</b> <span class="font-mono text-rose-400">{demo_kpis.get('open_alerts', 30) if 'DEMO' in active_mode else db_kpis.get('open_alerts', 0):,}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -374,6 +436,29 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# Render Global Data Mode Banner
+if "DEMO" in st.session_state.data_mode:
+    st.markdown("""
+    <div class="mode-banner-demo">
+        <span class="dot-pink"></span>
+        <b>ACTIVE MODE: SYNTHETIC DEMONSTRATION LAYER</b> — Displaying 500 realistic, deterministic transactions (14% flagged rate, 30 prioritized alerts) for rich demonstration. All model scores are real.
+    </div>
+    """, unsafe_allow_html=True)
+elif "REAL" in st.session_state.data_mode:
+    st.markdown("""
+    <div class="mode-banner-real">
+        <span class="dot-green"></span>
+        <b>ACTIVE MODE: REAL DATASET BENCHMARK</b> — Ground truth from 284,807 European cardholder transactions (492 frauds, 0.1727% fraud rate) and local SQLite audit database.
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div class="mode-banner-comb">
+        <span class="dot-green"></span>
+        <b>ACTIVE MODE: COMBINED VIEW</b> — Aggregating real Kaggle dataset metrics alongside active demonstration and audit logs.
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # Load artifacts
 ds_summary = load_dataset_summary()
@@ -382,10 +467,14 @@ sample_presets = load_sample_presets()
 exp_df = load_experiment_results()
 model_meta = load_metadata()
 db_kpis = get_dashboard_kpis()
+demo_kpis = get_demo_kpis()
+demo_df = get_demo_transactions()
+demo_alerts = get_demo_alerts()
+demo_scenarios = get_demo_scenarios()
 
 
 # =============================================================================
-# MODULE 1: 🏠 COMMAND CENTER (The Main Operations Center)
+# MODULE 1: 🏠 COMMAND CENTER (Operations Console)
 # =============================================================================
 if selected_page == "🏠 Command Center":
     # Quick Navigation Buttons
@@ -399,59 +488,107 @@ if selected_page == "🏠 Command Center":
             st.session_state.selected_nav = "📊 Dataset Intelligence"
             st.rerun()
     with c_btn3:
-        if st.button("⚡ Launch Live Simulation", use_container_width=True):
-            st.session_state.selected_nav = "⚡ Live Simulation"
+        if st.button("🚨 View Fraud Alert Queue", use_container_width=True):
+            st.session_state.selected_nav = "🚨 Fraud Alerts"
             st.rerun()
 
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-    # Key Operational KPI Cards (Ground Truth Provenance)
+    # Key Operational KPI Cards (Dynamic according to mode)
     k1, k2, k3, k4, k5 = st.columns(5)
-    with k1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <span class="metric-provenance tag-real">REAL DATASET</span>
-            <div class="metric-val">{ds_summary.get('overview', {}).get('total_transactions', 284807):,}</div>
-            <div class="metric-lbl">Total Transactions</div>
-            <div class="metric-sub">Kaggle Benchmark (48h)</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <span class="metric-provenance tag-real">REAL DATASET</span>
-            <div class="metric-val text-rose-400" style="color: #f87171;">{ds_summary.get('overview', {}).get('fraud_count', 492):,}</div>
-            <div class="metric-lbl">Fraud Incidents</div>
-            <div class="metric-sub">Rate: <b>0.1727%</b> (492/284k)</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <span class="metric-provenance tag-model">MODEL BENCHMARK</span>
-            <div class="metric-val text-blue-400" style="color: #60a5fa;">{eval_bundle.get('default_metrics', {}).get('pr_auc', 0.8096):.4f}</div>
-            <div class="metric-lbl">PR-AUC Score</div>
-            <div class="metric-sub">Tuned Random Forest Test</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k4:
-        st.markdown(f"""
-        <div class="metric-card">
-            <span class="metric-provenance tag-vault">STORED IN VAULT</span>
-            <div class="metric-val text-emerald-400" style="color: #34d399;">{db_kpis.get('total_transactions', 0):,}</div>
-            <div class="metric-lbl">Monitored in Vault</div>
-            <div class="metric-sub">Flagged: <b>{db_kpis.get('flagged_transactions', 0):,}</b></div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k5:
-        st.markdown(f"""
-        <div class="metric-card">
-            <span class="metric-provenance tag-vault">STORED IN VAULT</span>
-            <div class="metric-val text-amber-400" style="color: #fbbf24;">{db_kpis.get('open_alerts', 0):,}</div>
-            <div class="metric-lbl">Active Alerts</div>
-            <div class="metric-sub">Reviewed: <b>{db_kpis.get('transactions_reviewed', 0):,}</b></div>
-        </div>
-        """, unsafe_allow_html=True)
+    
+    if "DEMO" in st.session_state.data_mode:
+        with k1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-demo">SYNTHETIC DEMO</span>
+                <div class="metric-val">{demo_kpis['total_transactions']:,}</div>
+                <div class="metric-lbl">Total Transactions</div>
+                <div class="metric-sub">Calibrated Demo Layer</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-demo">SYNTHETIC DEMO</span>
+                <div class="metric-val" style="color: #f87171;">{demo_kpis['fraud_flags']:,}</div>
+                <div class="metric-lbl">Flagged Incidents</div>
+                <div class="metric-sub">Rate: <b>{demo_kpis['fraud_rate_pct']:.1f}%</b> (Rich Demo)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-model">MODEL BENCHMARK</span>
+                <div class="metric-val" style="color: #60a5fa;">{eval_bundle.get('default_metrics', {}).get('pr_auc', 0.8096):.4f}</div>
+                <div class="metric-lbl">PR-AUC Score</div>
+                <div class="metric-sub">Tuned Random Forest Test</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k4:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-demo">SYNTHETIC DEMO</span>
+                <div class="metric-val" style="color: #34d399;">{demo_kpis['high_risk_transactions']:,}</div>
+                <div class="metric-lbl">High-Risk Severity</div>
+                <div class="metric-sub">Score &ge; 61 / 100</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k5:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-demo">SYNTHETIC DEMO</span>
+                <div class="metric-val" style="color: #fbbf24;">{demo_kpis['open_alerts']:,}</div>
+                <div class="metric-lbl">Active Alerts</div>
+                <div class="metric-sub">Reviewed: <b>{demo_kpis['transactions_reviewed']:,}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        with k1:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-real">REAL DATASET</span>
+                <div class="metric-val">{ds_summary.get('overview', {}).get('total_transactions', 284807):,}</div>
+                <div class="metric-lbl">Total Transactions</div>
+                <div class="metric-sub">Kaggle Benchmark (48h)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-real">REAL DATASET</span>
+                <div class="metric-val" style="color: #f87171;">{ds_summary.get('overview', {}).get('fraud_count', 492):,}</div>
+                <div class="metric-lbl">Fraud Incidents</div>
+                <div class="metric-sub">Rate: <b>0.1727%</b> (492/284k)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k3:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-model">MODEL BENCHMARK</span>
+                <div class="metric-val" style="color: #60a5fa;">{eval_bundle.get('default_metrics', {}).get('pr_auc', 0.8096):.4f}</div>
+                <div class="metric-lbl">PR-AUC Score</div>
+                <div class="metric-sub">Tuned Random Forest Test</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k4:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-vault">STORED IN VAULT</span>
+                <div class="metric-val" style="color: #34d399;">{db_kpis.get('total_transactions', 0):,}</div>
+                <div class="metric-lbl">Monitored in Vault</div>
+                <div class="metric-sub">Flagged: <b>{db_kpis.get('fraud_flags', 0):,}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k5:
+            st.markdown(f"""
+            <div class="metric-card">
+                <span class="metric-provenance tag-vault">STORED IN VAULT</span>
+                <div class="metric-val" style="color: #fbbf24;">{db_kpis.get('open_alerts', 0):,}</div>
+                <div class="metric-lbl">Active Alerts</div>
+                <div class="metric-sub">Reviewed: <b>{db_kpis.get('transactions_reviewed', 0):,}</b></div>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
@@ -505,9 +642,25 @@ if selected_page == "🏠 Command Center":
     st.subheader("🚨 Incident Queue & Audit Activity")
     c_act1, c_act2 = st.columns([3, 2])
     with c_act1:
-        st.markdown("**Recent High-Risk Incidents (Vault Database)**")
-        recent_txns = get_recent_transactions(limit=6)
-        if recent_txns:
+        st.markdown("**Recent High-Risk Incidents (Active Alert Queue)**")
+        # Load from DB or Demo based on active mode
+        if "DEMO" in st.session_state.data_mode or db_kpis.get("total_transactions", 0) < 5:
+            disp_alerts = demo_alerts[:6]
+            table_rows = []
+            for a in disp_alerts:
+                table_rows.append({
+                    "TXN ID": a["transaction_id"],
+                    "Time": a["created_at"].split(" ")[1] if " " in a["created_at"] else a["created_at"][:8],
+                    "Amount": format_currency(a["amount"], active_currency),
+                    "Channel": a["channel"],
+                    "Risk Score": f"{a['risk_score']} / 100",
+                    "Risk Level": a["risk_level"],
+                    "Status": a["status"],
+                    "Provenance": a.get("provenance", "SYNTHETIC DEMO"),
+                })
+            st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
+        else:
+            recent_txns = get_recent_transactions(limit=6)
             table_rows = []
             for t in recent_txns:
                 table_rows.append({
@@ -518,29 +671,33 @@ if selected_page == "🏠 Command Center":
                     "Risk Level": t["risk_level"],
                     "Status": t["status"],
                     "Decision": "🚨 FLAGGED" if t["is_flagged"] else "✅ APPROVED",
+                    "Provenance": "STORED IN VAULT",
                 })
             st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
-        else:
-            st.info("No recorded transactions in vault database. Run a simulation or score a transaction.")
 
     with c_act2:
         st.markdown("**Live System Activity Log**")
-        if recent_txns:
-            for t in recent_txns[:4]:
-                badge_style = "dot-green" if not t["is_flagged"] else "dot-amber"
-                st.markdown(f"""
-                <div style="padding:8px 12px; margin-bottom:6px; border-radius:8px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); font-size:0.75rem;">
-                    <div style="display:flex; justify-content:space-between; color:#94a3b8;">
-                        <span class="font-mono">{t['id']}</span>
-                        <span>{t['timestamp'][:19].replace('T', ' ')}</span>
-                    </div>
-                    <div style="margin-top:3px; color:#f1f5f9;">
-                        <b>{format_currency(t['amount'], active_currency)}</b> evaluated • Risk <b>{t['risk_score']}</b> ({t['risk_level']}) • Status: <b>{t['status']}</b>
-                    </div>
+        events_to_show = demo_alerts[:4] if ("DEMO" in st.session_state.data_mode or db_kpis.get("total_transactions", 0) < 5) else get_recent_transactions(limit=4)
+        for ev in events_to_show:
+            t_id = ev.get("transaction_id") or ev.get("id")
+            t_amt = ev.get("amount", 0.0)
+            t_score = ev.get("risk_score", 0)
+            t_lvl = ev.get("risk_level", "LOW")
+            t_stat = ev.get("status", "Active")
+            t_prov = ev.get("provenance", "SYNTHETIC DEMO")
+            badge_color = "#f87171" if t_score >= 61 else "#fbbf24" if t_score >= 31 else "#34d399"
+
+            st.markdown(f"""
+            <div style="padding:8px 12px; margin-bottom:6px; border-radius:8px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.06); font-size:0.75rem;">
+                <div style="display:flex; justify-content:space-between; color:#94a3b8;">
+                    <span class="font-mono">{t_id}</span>
+                    <span class="font-mono text-xs" style="color:#ec4899;">{t_prov}</span>
                 </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.caption("No recent events logged.")
+                <div style="margin-top:3px; color:#f1f5f9;">
+                    <b>{format_currency(t_amt, active_currency)}</b> evaluated • Risk <b style="color:{badge_color};">{t_score}/100</b> ({t_lvl}) • Status: <b>{t_stat}</b>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 
 # =============================================================================
@@ -608,8 +765,8 @@ elif selected_page == "📊 Dataset Intelligence":
     with tab_features:
         feat_profiles = ds_summary.get("feature_profiles", {})
         if feat_profiles:
-            st.markdown(r"**Inspect Statistical Signatures of Any Anonymized Feature ($V_1 \dots V_{28}$, Amount, Time)**")
-            selected_feat = st.selectbox("Select Feature Component", FEATURE_COLUMNS, index=14)  # default V14
+            st.markdown(r"**Inspect Statistical Signatures of Any Feature ($V_1 \dots V_{28}$, Amount, Time)**")
+            selected_feat = st.selectbox("Select Feature Component", FEATURE_COLUMNS, index=14)
             prof = feat_profiles.get(selected_feat, {})
 
             f_c1, f_c2, f_c3, f_c4 = st.columns(4)
@@ -618,7 +775,6 @@ elif selected_page == "📊 Dataset Intelligence":
             f_c3.metric("Legit Class Mean", f"{prof.get('legit_mean', 0.0):.4f}")
             f_c4.metric("Correlation w/ Class", f"{prof.get('correlation_with_class', 0.0):+.4f}")
 
-            # Plot comparison of means
             fig_f_comp = go.Figure()
             fig_f_comp.add_trace(go.Bar(name="Legitimate Mean", x=[selected_feat], y=[prof.get("legit_mean", 0.0)], marker_color="#3b82f6"))
             fig_f_comp.add_trace(go.Bar(name="Fraudulent Mean", x=[selected_feat], y=[prof.get("fraud_mean", 0.0)], marker_color="#ef4444"))
@@ -658,156 +814,335 @@ elif selected_page == "📊 Dataset Intelligence":
 
 
 # =============================================================================
-# MODULE 3: 🔎 TRANSACTION INVESTIGATION (Analyst Workspace)
+# MODULE 3: 🔎 TRANSACTION INVESTIGATION (Immediate Full Decision Sequence)
 # =============================================================================
 elif selected_page == "🔎 Transaction Investigation":
     st.title("🔎 Transaction Investigation Workspace")
-    st.markdown("Run end-to-end inference through the **canonical ModelService**, inspect calibrated risk scores, and review directional SHAP feature forces.")
+    st.markdown("""
+    End-to-end operational intelligence: **Input Vector → Real-Time Inference → Mathematical Decision Logic → Directional SHAP Attribution → What-If Sensitivity → Case Audit Action**.
+    """)
 
-    # Step 1: Input Setup
-    st.markdown("### Step 1: Transaction Feature Input")
-    tab_preset, tab_quick, tab_advanced = st.tabs(["📂 Load Dataset Preset", "⚡ Quick Sliders", "🔬 Complete 30-Feature Vector"])
+    # Step 1: Input Setup with 5 Curated Scenarios
+    st.markdown("### Step 1: Select or Configure Transaction Vector")
+    tab_scenarios, tab_preset, tab_quick, tab_advanced = st.tabs([
+        "🎭 5 Curated Scenarios",
+        "📂 Real Kaggle Presets",
+        "⚡ Key Drivers (Sliders)",
+        "🔬 Complete 30-Feature Vector",
+    ])
 
-    preset_features = sample_presets[8]["features"] if sample_presets else {col: 0.0 for col in FEATURE_COLUMNS}
     active_features = {}
+    preset_label = ""
+    scenario_metadata = {}
+
+    with tab_scenarios:
+        st.markdown("Select from 5 pre-calibrated scenario archetypes designed for immediate viva demonstration:")
+        scenario_keys = list(demo_scenarios.keys())
+        chosen_sc_name = st.selectbox("Select Scenario Archetype", scenario_keys, index=2)  # Default High-Risk
+        sc_info = demo_scenarios[chosen_sc_name]
+        scenario_metadata = sc_info
+        preset_label = f"{sc_info['scenario_id']} — {sc_info['title']}"
+
+        st.markdown(f"""
+        <div style="padding:12px 16px; border-radius:8px; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.08); margin: 8px 0 14px 0;">
+            <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">{sc_info['title']}</div>
+            <div style="color:#94a3b8; font-size:0.80rem; margin-top:2px;">{sc_info['description']}</div>
+            <div style="display:flex; gap:16px; margin-top:8px; font-size:0.75rem; flex-wrap:wrap;">
+                <span><b>Category:</b> {sc_info['category']}</span>
+                <span><b>Channel:</b> {sc_info['channel']}</span>
+                <span><b>Location:</b> {sc_info['location']}</span>
+                <span><b>Expected Verdict:</b> {sc_info['expected_verdict']}</span>
+            </div>
+            <div style="font-size:0.72rem; color:#60a5fa; margin-top:6px;"><b>Profile Note:</b> {sc_info['explanation']}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        active_features = {col: float(sc_info["features"].get(col, 0.0)) for col in FEATURE_COLUMNS}
 
     with tab_preset:
         preset_names = [f"{p['id']} — {p['name']} ({'🚨 FRAUD' if p.get('actual_class')==1 else '✅ LEGIT'})" for p in sample_presets]
-        selected_preset_idx = st.selectbox("Select Ground-Truth Preset Record", range(len(preset_names)), format_func=lambda i: preset_names[i], index=8)
+        selected_preset_idx = st.selectbox("Select Kaggle Ground-Truth Record", range(len(preset_names)), format_func=lambda i: preset_names[i], index=8)
         chosen_preset = sample_presets[selected_preset_idx]
-        preset_features = chosen_preset["features"]
-
         gt_label = "🚨 GROUND TRUTH: FRAUDULENT" if chosen_preset.get("actual_class") == 1 else "✅ GROUND TRUTH: LEGITIMATE"
         st.markdown(f"<span class='status-badge font-mono' style='color:#f8fafc;'>{gt_label}</span>", unsafe_allow_html=True)
         st.markdown(f"**Amount:** {format_currency(chosen_preset['amount'], active_currency)} • **Elapsed Time:** {chosen_preset['time']}s")
-        active_features = {col: float(preset_features.get(col, 0.0)) for col in FEATURE_COLUMNS}
+        # Overwrite if user clicks this tab
+        if st.checkbox("Load this Kaggle Preset into Active Vector", value=False, key="use_kaggle_preset"):
+            active_features = {col: float(chosen_preset["features"].get(col, 0.0)) for col in FEATURE_COLUMNS}
+            preset_label = chosen_preset["id"]
 
     with tab_quick:
         st.markdown("Adjust primary financial and top predictive PCA features:")
         q_c1, q_c2, q_c3 = st.columns(3)
         with q_c1:
-            q_amount = st.number_input("Transaction Amount ($)", value=float(preset_features.get("Amount", 99.99)), min_value=0.0, step=10.0)
-            q_v14 = st.slider("V14 (Leading Predictor)", -10.0, 5.0, float(preset_features.get("V14", -4.28)), 0.1)
+            q_amount = st.number_input("Transaction Amount ($)", value=float(active_features.get("Amount", 99.99)), min_value=0.0, step=10.0, key="quick_amt")
+            q_v14 = st.slider("V14 (Leading Negative Predictor)", -12.0, 5.0, float(active_features.get("V14", -4.28)), 0.1, key="quick_v14")
         with q_c2:
-            q_time = st.number_input("Time (Seconds from start)", value=float(preset_features.get("Time", 406.0)), min_value=0.0, step=100.0)
-            q_v10 = st.slider("V10 (Risk Elevator)", -10.0, 5.0, float(preset_features.get("V10", -2.77)), 0.1)
+            q_time = st.number_input("Time (Seconds from start)", value=float(active_features.get("Time", 406.0)), min_value=0.0, step=100.0, key="quick_time")
+            q_v10 = st.slider("V10 (Risk Elevator)", -10.0, 5.0, float(active_features.get("V10", -2.77)), 0.1, key="quick_v10")
         with q_c3:
-            q_v12 = st.slider("V12 (Separation Component)", -10.0, 5.0, float(preset_features.get("V12", -2.89)), 0.1)
-            q_v17 = st.slider("V17 (Inverse Risk)", -10.0, 5.0, float(preset_features.get("V17", -2.83)), 0.1)
+            q_v12 = st.slider("V12 (Separation Component)", -10.0, 5.0, float(active_features.get("V12", -2.89)), 0.1, key="quick_v12")
+            q_v17 = st.slider("V17 (Inverse Risk)", -10.0, 5.0, float(active_features.get("V17", -2.83)), 0.1, key="quick_v17")
 
-        # Merge adjustments
-        active_features["Amount"] = q_amount
-        active_features["Time"] = q_time
-        active_features["V14"] = q_v14
-        active_features["V10"] = q_v10
-        active_features["V12"] = q_v12
-        active_features["V17"] = q_v17
+        if st.checkbox("Apply Quick Slider Overrides to Vector", value=False, key="apply_quick"):
+            active_features["Amount"] = q_amount
+            active_features["Time"] = q_time
+            active_features["V14"] = q_v14
+            active_features["V10"] = q_v10
+            active_features["V12"] = q_v12
+            active_features["V17"] = q_v17
 
     with tab_advanced:
         st.markdown("Full 30-feature vector inputs:")
         adv_cols = st.columns(5)
         for i, col in enumerate(FEATURE_COLUMNS):
             with adv_cols[i % 5]:
-                val = float(active_features.get(col, preset_features.get(col, 0.0)))
+                val = float(active_features.get(col, 0.0))
                 active_features[col] = st.number_input(col, value=val, key=f"adv_{col}")
 
-    # Threshold Selector
-    invest_threshold = st.slider("Operational Decision Threshold (Cutoff)", min_value=0.01, max_value=0.99, value=0.50, step=0.01)
+    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-    # Before / After Pipeline Flow Visualization
-    st.markdown("""
+    # Step 2: Dynamic Operational Threshold
+    st.markdown("### Step 2: Operational Decision Cutoff ($\tau$)")
+    t_c1, t_c2 = st.columns([3, 2])
+    with t_c1:
+        invest_threshold = st.slider(
+            "Classification Decision Cutoff Threshold ($\\tau$)",
+            min_value=0.01,
+            max_value=0.99,
+            value=0.50,
+            step=0.01,
+            help="Transactions with Posterior Probability P(Fraud) >= tau are flagged."
+        )
+    with t_c2:
+        st.markdown("<div style='font-size:0.75rem; color:#94a3b8; margin-bottom:4px;'>Preset Threshold Strategies</div>", unsafe_allow_html=True)
+        tb_c1, tb_c2, tb_c3 = st.columns(3)
+        with tb_c1:
+            if st.button("⚖️ Balanced (0.50)"):
+                invest_threshold = 0.50
+        with tb_c2:
+            if st.button("🛡️ High Recall (0.35)"):
+                invest_threshold = 0.35
+        with tb_c3:
+            if st.button("🎯 High Prec. (0.65)"):
+                invest_threshold = 0.65
+
+    # Pipeline Flow Visual Bar
+    st.markdown(f"""
     <div style="padding:10px 14px; margin: 12px 0; border-radius:8px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); font-size:0.75rem; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
         <span><b>INPUT:</b> 30 Features</span> → 
         <span><b>SCALING:</b> StandardScaler (Time, Amount)</span> → 
-        <span><b>MODEL:</b> Tuned Random Forest</span> → 
-        <span><b>OUTPUT:</b> P(Fraud)</span> → 
-        <span><b>DECISION:</b> Threshold Comparison</span> → 
-        <span><b>EXPLANATION:</b> SHAP Attribution</span>
+        <span><b>MODEL:</b> Tuned Random Forest (100 Trees)</span> → 
+        <span><b>POSTERIOR:</b> P(Fraud)</span> → 
+        <span><b>CUTOFF:</b> &ge; {invest_threshold:.2f}</span> → 
+        <span><b>EXPLANATION:</b> Directional SHAP</span>
     </div>
     """, unsafe_allow_html=True)
 
-    # Score Action
-    if st.button("🚀 Evaluate Transaction Risk", type="primary", use_container_width=True):
+    # Step 3: Run Inference
+    if st.button("🚀 Run SENTINEL Intelligence & Risk Audit", type="primary", use_container_width=True):
         service = get_service()
         result = service.predict_single(active_features, threshold=invest_threshold)
+        if scenario_metadata:
+            result["channel"] = scenario_metadata.get("channel", "POS Terminal")
+            result["category"] = scenario_metadata.get("category", "Retail")
+            result["location"] = scenario_metadata.get("location", "Global")
         save_transaction(result, is_simulated=False)
         st.session_state.last_evaluated = result
-        st.success(f"Transaction evaluated and recorded in vault! ID: {result['transaction_id']}")
+        st.success(f"Transaction evaluated and recorded in audit vault! ID: {result['transaction_id']}")
 
-    # Results Display
+    # Step 4: Immediate Results, Decision Logic & Inline SHAP XAI
     if st.session_state.last_evaluated:
         res = st.session_state.last_evaluated
-        st.markdown("---")
-        st.subheader("📋 Transaction Investigation Report")
+        # Recalculate decision if threshold slider was moved after prediction
+        recalc_flag = bool(res["fraud_probability"] >= invest_threshold)
+        recalc_status = "🚨 FLAGGED FOR MANUAL REVIEW" if recalc_flag else "✅ APPROVED AS LEGITIMATE"
+        recalc_color = "#f87171" if recalc_flag else "#34d399"
 
+        st.markdown("---")
+        st.subheader("📋 Real-Time Investigation Dossier")
+
+        # Row 1: Detection Output & Transparent Decision Rule
         r_c1, r_c2 = st.columns([1, 1])
         with r_c1:
             st.plotly_chart(plot_risk_gauge(res["risk_score"], threshold=invest_threshold), use_container_width=True)
-            dec_color = "#f87171" if res["is_flagged"] else "#34d399"
-            dec_text = "🚨 FLAGGED FOR MANUAL REVIEW" if res["is_flagged"] else "✅ APPROVED AS LEGITIMATE"
             st.markdown(f"""
-            <div style="text-align:center; padding:10px; border-radius:8px; background:rgba(15,23,42,0.7); border:1px solid {dec_color}44;">
-                <div style="font-size:1.1rem; font-weight:800; color:{dec_color};">{dec_text}</div>
-                <div style="font-size:0.8rem; color:#94a3b8; margin-top:4px;">
-                    Model Posterior Probability: <b>{res['fraud_probability']:.4f}</b> • Calibrated Score: <b>{res['risk_score']} / 100</b>
+            <div style="text-align:center; padding:12px; border-radius:10px; background:rgba(15,23,42,0.7); border:1px solid {recalc_color}44; margin-top:-10px;">
+                <div style="font-size:1.2rem; font-weight:800; color:{recalc_color};">{recalc_status}</div>
+                <div style="font-size:0.82rem; color:#94a3b8; margin-top:4px;">
+                    Posterior Probability: <b>{res['fraud_probability']:.4f}</b> • Threshold Cutoff: <b>{invest_threshold:.2f}</b> • Score: <b>{res['risk_score']} / 100</b> ({res['risk_level']})
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         with r_c2:
-            explainer = get_explainer()
-            xai_res = explainer.explain_transaction(active_features, top_k=8)
+            st.markdown("#### 📐 Transparent Mathematical Decision Rule")
+            st.markdown(f"""
+            <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; font-size:0.80rem; space-y-2;">
+                <div><b>1. Feature Vector Ingestion:</b> Amount = <code>{format_currency(res['amount'], active_currency)}</code>, Elapsed Time = <code>{res['time']:.0f}s</code>.</div>
+                <div style="margin-top:6px;"><b>2. Normalization:</b> <code>Time</code> and <code>Amount</code> transformed via Robust StandardScaler parameters ($z = \\frac{{x - \\mu}}{{\\sigma}}$).</div>
+                <div style="margin-top:6px;"><b>3. Ensemble Tree Voting:</b> Evaluated across 100 decorrelated decision trees in Tuned Random Forest.</div>
+                <div style="margin-top:6px;"><b>4. Model Posterior Probability:</b>
+                    <div style="padding:6px 10px; background:rgba(0,0,0,0.3); border-radius:6px; margin:4px 0; font-family:'JetBrains Mono';">
+                        P(Fraud | X) = {res['fraud_probability']:.4f} ({res['fraud_probability']*100:.1f}% Tree Agreement)
+                    </div>
+                </div>
+                <div style="margin-top:6px;"><b>5. Decision Comparison:</b>
+                    <div style="padding:6px 10px; background:rgba(0,0,0,0.3); border-radius:6px; margin:4px 0; font-family:'JetBrains Mono';">
+                        Decision = {"FLAGGED" if recalc_flag else "APPROVED"} &nbsp;[Condition: {res['fraud_probability']:.4f} {">=" if recalc_flag else "<"} {invest_threshold:.2f}]
+                    </div>
+                </div>
+                <div style="margin-top:6px;"><b>6. Security Action:</b> {"Queued into Analyst Alert Center for manual review." if recalc_flag else "Cleared immediately through automated STP (Straight-Through Processing)."}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Row 2: Immediate Directional SHAP Attribution Bars (The "Why")
+        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+        st.subheader("🧠 Explainable AI: Directional SHAP Attributions")
+        st.caption("Which specific features pushed this transaction toward fraud or pulled it toward legitimate status?")
+
+        explainer = get_explainer()
+        xai_res = explainer.explain_transaction(active_features, top_k=8)
+
+        x_col1, x_col2 = st.columns([1, 1])
+        with x_col1:
             st.plotly_chart(plot_shap_force_bars(xai_res.get("top_features", [])), use_container_width=True)
+        with x_col2:
+            st.markdown("**Feature Contribution Details**")
+            top_feats = xai_res.get("top_features", [])
+            table_records = []
+            for tf in top_feats:
+                raw_val = active_features.get(tf["feature"], 0.0)
+                table_records.append({
+                    "Feature": tf["feature"],
+                    "Input Value": f"{raw_val:.4f}" if abs(raw_val) < 100 else f"{raw_val:.2f}",
+                    "SHAP Impact": f"{tf['shap_value']:+.4f}",
+                    "Effect": "🚨 Pushes toward Fraud" if tf["shap_value"] > 0 else "✅ Pulls toward Legit",
+                })
+            st.dataframe(pd.DataFrame(table_records), use_container_width=True, hide_index=True)
             st.markdown(f"**Attribution Narrative:** {xai_res.get('narrative', '')}")
 
-        # Expandable Pipeline Details
-        with st.expander("🔍 How did SENTINEL decide? (Detailed Decision Pipeline)"):
-            st.markdown(f"""
-            1. **Feature Vector Ingestion:** Received vector with Amount = {format_currency(res['amount'], active_currency)} and Time = {res['time']}s.
-            2. **Preprocessing & Standardization:** Standardized `Time` and `Amount` using training set parameters (Mean Amount: $88.35, Std: 250.12).
-            3. **Ensemble Voting:** 100 decision trees in the Tuned Random Forest evaluated the vector across split criteria.
-            4. **Posterior Probability Generation:** Exactly **{res['fraud_probability']*100:.2f}%** of voting trees classified the sample as fraudulent.
-            5. **Threshold Application:** Probability {res['fraud_probability']:.4f} was compared against cutoff $\\tau = {invest_threshold:.2f}$.
-            6. **Action Taken:** {'Flagged and queued in Alerts table.' if res['is_flagged'] else 'Approved; no alert triggered.'}
-            """)
+        # Row 3: Immediate Inline Sensitivity & What-If Simulator
+        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+        st.subheader("🔬 What Would Change This Decision? (Inline Sensitivity Simulator)")
+        st.caption("Perturb leading features in real-time to observe how the posterior probability and decision boundary respond:")
+
+        wi_col1, wi_col2, wi_col3 = st.columns(3)
+        with wi_col1:
+            sim_amt = st.number_input("Perturb Amount ($)", value=float(res["amount"]), step=25.0, key="wi_in_amt")
+        with wi_col2:
+            sim_v14 = st.slider("Perturb V14 (Leading Anomaly)", -12.0, 5.0, float(active_features.get("V14", -4.0)), 0.2, key="wi_in_v14")
+        with wi_col3:
+            sim_v10 = st.slider("Perturb V10 (Risk Elevator)", -10.0, 5.0, float(active_features.get("V10", -2.5)), 0.2, key="wi_in_v10")
+
+        # Run fast sensitivity prediction
+        perturbed_features = dict(active_features)
+        perturbed_features["Amount"] = sim_amt
+        perturbed_features["V14"] = sim_v14
+        perturbed_features["V10"] = sim_v10
+
+        service = get_service()
+        pert_res = service.predict_single(perturbed_features, threshold=invest_threshold)
+        p_delta = pert_res["fraud_probability"] - res["fraud_probability"]
+
+        st.plotly_chart(plot_what_if_comparison(res["fraud_probability"], pert_res["fraud_probability"]), use_container_width=True)
+        st.markdown(f"""
+        <div style="font-size:0.85rem; padding:10px 14px; border-radius:8px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; flex-wrap:wrap;">
+            <span><b>Baseline Probability:</b> <code>{res['fraud_probability']:.4f}</code> ({res['risk_level']})</span>
+            <span><b>Perturbed Probability:</b> <code>{pert_res['fraud_probability']:.4f}</code> ({pert_res['risk_level']})</span>
+            <span><b>Net Delta:</b> <code style="color:{'#f87171' if p_delta > 0 else '#34d399'};">{p_delta:+.4f}</code></span>
+            <span><b>New Verdict:</b> <b>{'🚨 FLAGGED' if pert_res['is_flagged'] else '✅ APPROVED'}</b></span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Row 4: Immediate Analyst Disposition / Audit Action
+        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+        st.subheader("✍️ Analyst Case Disposition & Vault Audit Log")
+        disp_col1, disp_col2 = st.columns([1, 1])
+        with disp_col1:
+            analyst_choice = st.selectbox("Assign Case Verdict", [
+                "Under Investigation",
+                "Escalated to Tier-2 Fraud Ring Unit",
+                "Confirmed Fraud (Card Blocked)",
+                "False Positive (Customer Verified)",
+                "Approved & Closed",
+            ])
+            analyst_tag = st.text_input("Reviewing Analyst Badge", value="Senior Fraud Specialist #402")
+        with disp_col2:
+            analyst_note = st.text_area("Investigation Observations", placeholder="Enter customer verification details, device IP match, or merchant dispute log...")
+
+        if st.button("💾 Commit Disposition to Database Vault", type="primary"):
+            add_review_action(
+                transaction_id=res["transaction_id"],
+                action=f"Disposition: {analyst_choice}",
+                reviewer=analyst_tag,
+                notes=analyst_note.strip() if analyst_note else "Standard case adjudication",
+            )
+            st.success(f"Audit log committed to SQLite database vault for {res['transaction_id']}!")
 
 
 # =============================================================================
 # MODULE 4: 🚨 FRAUD ALERTS (Investigation Center)
 # =============================================================================
 elif selected_page == "🚨 Fraud Alerts":
-    st.title("🚨 Fraud Alert Center")
-    st.markdown("Manage, triage, and annotate high-risk transactions queued for analyst review.")
+    st.title("🚨 Fraud Alert & Incident Queue")
+    st.markdown("Prioritize, investigate, and adjudicate high-risk incidents queued by the SENTINEL inference engine.")
 
-    f_col1, f_col2 = st.columns([1, 1])
+    # Filter Controls
+    f_col1, f_col2, f_col3 = st.columns(3)
     with f_col1:
-        status_filter = st.selectbox("Filter by Status", ["All", "Pending", "Reviewing", "Escalated", "Confirmed Fraud", "False Positive", "Closed"])
+        status_filter = st.selectbox("Filter by Status", ["All", "Pending Review", "Under Review", "Escalated", "Confirmed Fraud", "Open"])
     with f_col2:
         risk_filter = st.selectbox("Filter by Risk Level", ["All", "CRITICAL", "HIGH", "MEDIUM", "LOW"])
+    with f_col3:
+        channel_filter = st.selectbox("Filter by Channel", ["All", "Online Web", "Mobile App", "Contactless NFC", "POS Terminal", "ATM"])
 
-    alerts = get_alerts(status=None if status_filter == "All" else status_filter, limit=50)
+    # Source alerts from DB or Demo Layer
+    raw_alerts = get_alerts(status=None if status_filter == "All" else status_filter, limit=50)
+    if not raw_alerts or len(raw_alerts) < 5 or "DEMO" in st.session_state.data_mode:
+        alerts = demo_alerts
+    else:
+        alerts = raw_alerts
 
-    if alerts:
-        a_df = pd.DataFrame(alerts)
-        st.markdown(f"**Showing {len(alerts)} Alert Incidents**")
-        st.dataframe(
-            a_df[["id", "transaction_id", "risk_level", "fraud_probability", "status", "created_at"]],
-            use_container_width=True,
-            hide_index=True,
-        )
+    # Apply filters
+    filtered_alerts = []
+    for a in alerts:
+        if risk_filter != "All" and a.get("risk_level") != risk_filter:
+            continue
+        if status_filter != "All" and a.get("status") != status_filter:
+            continue
+        if channel_filter != "All" and a.get("channel") != channel_filter:
+            continue
+        filtered_alerts.append(a)
 
-        st.markdown("### Analyst Action & Investigation Notes")
-        chosen_alert_id = st.selectbox("Select Alert ID to Investigate", [a["id"] for a in alerts])
-        chosen_alert = next((a for a in alerts if a["id"] == chosen_alert_id), None)
+    st.markdown(f"**Showing {len(filtered_alerts)} Active Alert Incidents**")
+    
+    if filtered_alerts:
+        df_a = pd.DataFrame(filtered_alerts)
+        display_cols = [c for c in ["id", "transaction_id", "created_at", "amount", "channel", "category", "risk_score", "risk_level", "fraud_probability", "status", "provenance"] if c in df_a.columns]
+        st.dataframe(df_a[display_cols], use_container_width=True, hide_index=True)
+
+        st.markdown("### Analyst Action & Case Review")
+        chosen_alert_id = st.selectbox("Select Incident to Investigate", [a["transaction_id"] for a in filtered_alerts])
+        chosen_alert = next((a for a in filtered_alerts if a["transaction_id"] == chosen_alert_id), None)
 
         if chosen_alert:
             act_col1, act_col2 = st.columns([1, 1])
             with act_col1:
-                new_status = st.selectbox("Update Case Status", ["Reviewing", "Escalated", "Confirmed Fraud", "False Positive", "Closed"])
-                reviewer_name = st.text_input("Reviewer Name", value="Lead Fraud Analyst")
+                st.markdown(f"""
+                <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px; font-size:0.80rem;">
+                    <div><b>Transaction ID:</b> <code>{chosen_alert['transaction_id']}</code></div>
+                    <div><b>Amount:</b> {format_currency(chosen_alert.get('amount', 0.0), active_currency)}</div>
+                    <div><b>Channel / Category:</b> {chosen_alert.get('channel', 'N/A')} • {chosen_alert.get('category', 'N/A')}</div>
+                    <div><b>Risk Score:</b> <b>{chosen_alert['risk_score']} / 100</b> ({chosen_alert['risk_level']})</div>
+                    <div><b>Posterior Probability:</b> <code>{chosen_alert.get('fraud_probability', 0.0):.4f}</code></div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                new_status = st.selectbox("Update Case Status", ["Under Review", "Escalated", "Confirmed Fraud", "False Positive", "Closed"])
+                reviewer_name = st.text_input("Reviewer Name", value="Senior Fraud Specialist")
                 if st.button("Submit Status Update", type="primary"):
                     add_review_action(chosen_alert["transaction_id"], f"Status updated to {new_status}", reviewer=reviewer_name)
-                    st.success(f"Alert {chosen_alert_id} updated to '{new_status}'!")
+                    st.success(f"Incident {chosen_alert_id} updated to '{new_status}'!")
                     st.rerun()
 
             with act_col2:
@@ -820,7 +1155,7 @@ elif selected_page == "🚨 Fraud Alerts":
                     else:
                         st.warning("Please enter a note before saving.")
     else:
-        st.info("No alerts found matching the current filters.")
+        st.info("No alerts match the active filter criteria. Clear filters to see queued incidents.")
 
 
 # =============================================================================
@@ -1032,35 +1367,55 @@ elif selected_page == "🔬 What-If Analysis":
 # =============================================================================
 elif selected_page == "🗂 Transaction Explorer":
     st.title("🗂 Transaction Vault Explorer")
-    st.markdown("Search, filter, and inspect transactions stored in the SQLite audit database.")
+    st.markdown("Search, filter, and inspect transactions stored in the SQLite audit database and demonstration layer.")
 
-    recent = get_recent_transactions(limit=100)
-    if recent:
-        df_vault = pd.DataFrame(recent)
+    # Determine data source based on data mode
+    if "DEMO" in st.session_state.data_mode:
+        df_source = demo_df
+        data_source_label = "SYNTHETIC DEMO LAYER (500 records)"
+    elif "REAL" in st.session_state.data_mode:
+        recent = get_recent_transactions(limit=200)
+        df_source = pd.DataFrame(recent) if recent else pd.DataFrame()
+        data_source_label = "SQLITE AUDIT VAULT"
+    else:
+        recent = get_recent_transactions(limit=100)
+        df_db = pd.DataFrame(recent) if recent else pd.DataFrame()
+        df_source = pd.concat([df_db, demo_df], ignore_index=True) if not df_db.empty else demo_df
+        data_source_label = "COMBINED AUDIT VAULT & DEMO LAYER"
 
+    st.caption(f"Active Data Source: **{data_source_label}**")
+
+    if not df_source.empty:
         # Filters
-        f1, f2 = st.columns(2)
+        f1, f2, f3 = st.columns(3)
         with f1:
             sel_risk = st.multiselect("Filter by Risk Level", ["LOW", "MEDIUM", "HIGH", "CRITICAL"], default=["LOW", "MEDIUM", "HIGH", "CRITICAL"])
         with f2:
-            sel_flag = st.selectbox("Classification Status", ["All", "Flagged Only", "Approved Only"])
+            sel_flag = st.selectbox("Classification Verdict", ["All", "Flagged Only", "Approved Only"])
+        with f3:
+            search_query = st.text_input("Search by ID or Channel", "")
 
-        filtered = df_vault[df_vault["risk_level"].isin(sel_risk)]
+        filtered = df_source[df_source["risk_level"].isin(sel_risk)]
         if sel_flag == "Flagged Only":
-            filtered = filtered[filtered["is_flagged"] == 1]
+            filtered = filtered[filtered["is_flagged"] == True]
         elif sel_flag == "Approved Only":
-            filtered = filtered[filtered["is_flagged"] == 0]
+            filtered = filtered[filtered["is_flagged"] == False]
 
-        st.dataframe(filtered[["id", "timestamp", "amount", "fraud_probability", "risk_score", "risk_level", "status", "is_simulated"]], use_container_width=True, hide_index=True)
+        if search_query.strip():
+            filtered = filtered[filtered["id"].str.contains(search_query, case=False, na=False) | filtered.get("channel", pd.Series([""]*len(filtered))).str.contains(search_query, case=False, na=False)]
+
+        st.markdown(f"**Found {len(filtered):,} Matching Transactions**")
+        display_cols = [c for c in ["id", "timestamp", "amount", "channel", "category", "fraud_probability", "risk_score", "risk_level", "status", "provenance"] if c in filtered.columns]
+        st.dataframe(filtered[display_cols], use_container_width=True, hide_index=True)
 
         st.download_button(
             "📥 Download Filtered Transactions (CSV)",
-            filtered.to_csv(index=False),
-            file_name="sentinel_vault_export.csv",
+            filtered[display_cols].to_csv(index=False),
+            file_name="sentinel_transactions_export.csv",
             mime="text/csv",
         )
     else:
-        st.info("Vault is currently empty.")
+        st.info("No transactions available to display.")
 
 
 # =============================================================================
@@ -1068,7 +1423,7 @@ elif selected_page == "🗂 Transaction Explorer":
 # =============================================================================
 elif selected_page == "⚙️ System & Model":
     st.title("⚙️ System Architecture & Administration")
-    st.markdown("Inspect backend dependencies, active file paths, and administrative maintenance utilities.")
+    st.markdown("Inspect backend dependencies, active file paths, model metadata, and administrative utilities.")
 
     st.markdown("""
     ```
@@ -1078,13 +1433,33 @@ elif selected_page == "⚙️ System & Model":
     │ INFERENCE ENGINE            │ ModelService (Tuned Random Forest)       │
     │ EXPLAINABILITY LAYER        │ SHAP TreeExplainer & Attribution Forces  │
     │ PERSISTENCE LAYER           │ SQLite3 ACID Database (sentinel.db)      │
+    │ DEMONSTRATION LAYER         │ Deterministic Synthetic Suite (500 TXNs) │
     │ SIMULATION LAYER            │ Gaussian Stream Generator                │
     │ VISUAL ANALYTICS            │ Plotly Interactive Scientific Suite      │
     └─────────────────────────────┴──────────────────────────────────────────┘
     ```
     """)
 
+    st.markdown("### Operational Telemetry")
+    t1, t2 = st.columns([1, 1])
+    with t1:
+        st.markdown(f"""
+        - **Model Artifact:** `{model_meta.get('model_type', 'RandomForestClassifier')}`
+        - **Number of Estimators:** `{model_meta.get('best_params', {}).get('n_estimators', 100)}`
+        - **Max Tree Depth:** `{model_meta.get('best_params', {}).get('max_depth', 12)}`
+        - **Default Threshold:** `{DEFAULT_THRESHOLD:.2f}`
+        - **Total Features:** `30 (Time, Amount, V1-V28)`
+        """)
+    with t2:
+        st.markdown(f"""
+        - **Database Status:** `Connected (sentinel.db)`
+        - **Monitored Vault Records:** `{db_kpis.get('total_transactions', 0):,}`
+        - **Open Audit Alerts:** `{db_kpis.get('open_alerts', 0):,}`
+        - **Demo Dataset Records:** `{demo_kpis.get('total_transactions', 500):,}`
+        - **Demo Seed:** `42 (Deterministic)`
+        """)
+
     st.markdown("### Database Administration")
-    if st.button("🌱 Re-Seed Demo Presets into Vault"):
+    if st.button("🌱 Re-Seed Presets into Vault"):
         n_seeded = seed_demo_database_if_empty()
         st.success(f"Database verified/seeded with {n_seeded} records!")
