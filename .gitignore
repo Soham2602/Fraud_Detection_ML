@@ -1,0 +1,29 @@
+# Python / Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Large Datasets (over 100MB GitHub limit)
+data/creditcard.csv
+*.csv
+!data/README.md
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Credentials and Local Files
+.env
+.git-credentials
