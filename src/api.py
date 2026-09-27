@@ -136,6 +136,8 @@ def root(request: Request):
         "documentation": "/docs",
         "health": "/health",
         "disclaimer": "Educational AI fraud intelligence platform. Do not enter real credit card numbers.",
+        "_debug_headers": dict(request.headers),
+        "_debug_scope_path": request.scope.get("path"),
     }
 
 
