@@ -19,7 +19,21 @@ for path in [str(BASE_DIR), str(SRC_DIR)]:
         sys.path.insert(0, path)
 
 from fastapi.responses import HTMLResponse
+from starlette.requests import Request
 from src.api import app
+
+@app.middleware("http")
+async def normalize_vercel_paths(request: Request, call_next):
+    """Normalize Vercel rewrite prefixes (/api/index.py or /api) to standard route paths."""
+    path = request.scope.get("path", "")
+    for prefix in ["/api/index.py", "/api/index", "/api"]:
+        if path == prefix:
+            request.scope["path"] = "/"
+            break
+        elif path.startswith(prefix + "/"):
+            request.scope["path"] = path[len(prefix):]
+            break
+    return await call_next(request)
 
 HTML_DASHBOARD = """<!DOCTYPE html>
 <html lang="en">
@@ -354,6 +368,8 @@ HTML_DASHBOARD = """<!DOCTYPE html>
 
 
 @app.get("/", response_class=HTMLResponse, tags=["Web Portal"])
+@app.get("/api", response_class=HTMLResponse, tags=["Web Portal"])
+@app.get("/api/", response_class=HTMLResponse, tags=["Web Portal"])
 def get_sentinel_dashboard():
     """Serve the complete responsive SENTINEL web portal for Vercel deployment."""
     return HTMLResponse(content=HTML_DASHBOARD)
