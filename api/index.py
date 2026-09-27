@@ -27,26 +27,30 @@ from src.html_dashboard import HTML_DASHBOARD
 @app.middleware("http")
 async def normalize_vercel_paths(request: Request, call_next):
     """
-    Normalize Vercel rewrite headers and entrypoint path prefixes so FastAPI
+    Normalize Vercel rewrite parameters and entrypoint path prefixes so FastAPI
     routes match the client's originally intended resource (/health, /docs, /predict).
     """
-    matched = (
-        request.headers.get("x-matched-path")
-        or request.headers.get("x-invoke-path")
-        or request.headers.get("x-rewrite-url")
-        or request.headers.get("x-original-url")
-        or request.headers.get("x-forwarded-uri")
-    )
-    raw = matched if matched else request.scope.get("path", "")
-    path = raw.split("?")[0] if raw else "/"
+    v_path = request.query_params.get("__vercel_path")
+    if v_path:
+        path = "/" + v_path.lstrip("/")
+    else:
+        matched = (
+            request.headers.get("x-matched-path")
+            or request.headers.get("x-invoke-path")
+            or request.headers.get("x-rewrite-url")
+            or request.headers.get("x-original-url")
+            or request.headers.get("x-forwarded-uri")
+        )
+        raw = matched if matched else request.scope.get("path", "")
+        path = raw.split("?")[0] if raw else "/"
 
-    for prefix in ["/api/index.py", "/api/index", "/api"]:
-        if path == prefix:
-            path = "/"
-            break
-        elif path.startswith(prefix + "/"):
-            path = path[len(prefix):]
-            break
+        for prefix in ["/api/index.py", "/api/index", "/api"]:
+            if path == prefix:
+                path = "/"
+                break
+            elif path.startswith(prefix + "/"):
+                path = path[len(prefix):]
+                break
 
     request.scope["path"] = path or "/"
     return await call_next(request)
