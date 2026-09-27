@@ -19,12 +19,14 @@ NOTEBOOKS_DIR = BASE_DIR / "notebooks"
 # Data Files
 CREDITCARD_CSV = DATA_DIR / "creditcard.csv"
 SAMPLE_PRESETS_JSON = DATA_DIR / "sample_presets.json"
+DATASET_SUMMARY_JSON = DATA_DIR / "dataset_summary.json"
 
 # Model Artifacts
 MODEL_PKL = MODELS_DIR / "fraud_detection_model.pkl"
 SCALER_PKL = MODELS_DIR / "scaler.pkl"
 FEATURES_PKL = MODELS_DIR / "feature_columns.pkl"
 METADATA_JSON = MODELS_DIR / "model_metadata.json"
+EVALUATION_BUNDLE_JSON = MODELS_DIR / "evaluation_bundle.json"
 EXPERIMENT_RESULTS_CSV = EXPERIMENTS_DIR / "results.csv"
 
 # Database Path - Supports Vercel Serverless /tmp fallback

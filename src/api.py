@@ -172,6 +172,33 @@ def get_model_information():
     return service.get_model_info()
 
 
+@app.get("/dataset-intelligence", tags=["Dataset Analytics"])
+def get_dataset_intelligence():
+    """Return precomputed Kaggle credit card dataset ground-truth statistics."""
+    service = ModelService.get_instance()
+    summary = service.get_dataset_summary()
+    if not summary:
+        raise HTTPException(status_code=404, detail="Dataset summary artifact not found.")
+    return summary
+
+
+@app.get("/evaluation-bundle", tags=["Model Analytics"])
+def get_evaluation_bundle():
+    """Return precomputed test-fold evaluation curves and metrics."""
+    service = ModelService.get_instance()
+    bundle = service.get_evaluation_bundle()
+    if not bundle:
+        raise HTTPException(status_code=404, detail="Evaluation bundle artifact not found.")
+    return bundle
+
+
+@app.get("/threshold-analysis", tags=["Model Analytics"])
+def analyze_threshold(threshold: float = Query(DEFAULT_THRESHOLD, ge=0.01, le=0.99)):
+    """Evaluate empirical test-fold precision, recall, and error counts at any decision threshold."""
+    service = ModelService.get_instance()
+    return service.get_threshold_metrics(threshold=threshold)
+
+
 @app.post("/predict", tags=["Inference"])
 def predict_single_transaction(payload: TransactionInput):
     service = ModelService.get_instance()

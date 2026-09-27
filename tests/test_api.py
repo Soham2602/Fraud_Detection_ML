@@ -1,7 +1,7 @@
 """
 test_api.py
 ------------
-Unit tests for FastAPI REST API endpoints.
+Unit tests for FastAPI REST API endpoints and data provenance contracts.
 """
 
 import pytest
@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from src.api import app
 from src.config import SAMPLE_PRESETS_JSON
+from src.model_service import ModelService
 import json
 
 
@@ -73,3 +74,41 @@ def test_kpis_endpoint(client):
     data = response.json()
     assert "total_transactions" in data
     assert "fraud_flags" in data
+
+
+def test_dataset_intelligence_endpoint(client):
+    response = client.get("/dataset-intelligence")
+    assert response.status_code == 200
+    data = response.json()
+    assert "overview" in data
+    assert data["overview"]["total_transactions"] == 284807
+    assert data["overview"]["fraud_count"] == 492
+    assert "amount_statistics" in data
+    assert "amount_distribution" in data
+
+
+def test_evaluation_bundle_endpoint(client):
+    response = client.get("/evaluation-bundle")
+    assert response.status_code == 200
+    data = response.json()
+    assert "default_metrics" in data
+    assert data["default_metrics"]["precision"] >= 0.90
+    assert data["default_metrics"]["recall"] >= 0.70
+    assert "threshold_sweep" in data
+    assert len(data["threshold_sweep"]) >= 50
+
+
+def test_threshold_analysis_endpoint(client):
+    r_low = client.get("/threshold-analysis?threshold=0.20").json()
+    r_high = client.get("/threshold-analysis?threshold=0.80").json()
+
+    assert r_low["recall"] >= r_high["recall"], "Lower threshold must have >= recall"
+    assert r_low["operational_mode"] == "HIGH_SENSITIVITY"
+    assert r_high["operational_mode"] == "CONSERVATIVE"
+
+
+def test_risk_score_determinism(presets):
+    service = ModelService.get_instance()
+    sample = presets[0]["features"]
+    scores = [service.predict_single(sample)["risk_score"] for _ in range(5)]
+    assert len(set(scores)) == 1, f"Risk scoring must be strictly deterministic across calls: {scores}"

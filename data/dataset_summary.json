@@ -1,0 +1,687 @@
+{
+  "overview": {
+    "total_transactions": 284807,
+    "clean_transactions": 283726,
+    "duplicate_transactions": 1081,
+    "missing_values": 0,
+    "fraud_count": 492,
+    "legitimate_count": 284315,
+    "fraud_rate_pct": 0.1727,
+    "time_span_hours": 48.0,
+    "dataset_citation": "Andrea Dal Pozzolo, Olivier Caelen, Reid A. Johnson, Gianluca Bontempi. Calibrating Probability with Undersampling for Fraud Detection in Credit Card Data. IEEE CIDM 2015."
+  },
+  "amount_statistics": {
+    "overall": {
+      "count": 284807,
+      "mean": 88.35,
+      "std": 250.12,
+      "min": 0.0,
+      "p25": 5.6,
+      "median": 22.0,
+      "p75": 77.16,
+      "p90": 203.0,
+      "p99": 1017.97,
+      "max": 25691.16
+    },
+    "legitimate": {
+      "count": 284315,
+      "mean": 88.29,
+      "std": 250.11,
+      "min": 0.0,
+      "p25": 5.65,
+      "median": 22.0,
+      "p75": 77.05,
+      "p90": 202.72,
+      "p99": 1016.97,
+      "max": 25691.16
+    },
+    "fraudulent": {
+      "count": 492,
+      "mean": 122.21,
+      "std": 256.68,
+      "min": 0.0,
+      "p25": 1.0,
+      "median": 9.25,
+      "p75": 105.89,
+      "p90": 346.75,
+      "p99": 1357.43,
+      "max": 2125.87
+    }
+  },
+  "amount_distribution": [
+    {
+      "bin": "$0\u201310",
+      "legit_count": 100015,
+      "fraud_count": 249,
+      "legit_pct": 35.18,
+      "fraud_pct": 50.61
+    },
+    {
+      "bin": "$10\u201350",
+      "legit_count": 90724,
+      "fraud_count": 57,
+      "legit_pct": 31.91,
+      "fraud_pct": 11.59
+    },
+    {
+      "bin": "$50\u2013100",
+      "legit_count": 37198,
+      "fraud_count": 56,
+      "legit_pct": 13.08,
+      "fraud_pct": 11.38
+    },
+    {
+      "bin": "$100\u2013200",
+      "legit_count": 27626,
+      "fraud_count": 45,
+      "legit_pct": 9.72,
+      "fraud_pct": 9.15
+    },
+    {
+      "bin": "$200\u2013500",
+      "legit_count": 19645,
+      "fraud_count": 50,
+      "legit_pct": 6.91,
+      "fraud_pct": 10.16
+    },
+    {
+      "bin": "$500\u20131K",
+      "legit_count": 6176,
+      "fraud_count": 26,
+      "legit_pct": 2.17,
+      "fraud_pct": 5.28
+    },
+    {
+      "bin": "$1K\u20132.5K",
+      "legit_count": 2491,
+      "fraud_count": 9,
+      "legit_pct": 0.88,
+      "fraud_pct": 1.83
+    },
+    {
+      "bin": "$2.5K+",
+      "legit_count": 440,
+      "fraud_count": 0,
+      "legit_pct": 0.15,
+      "fraud_pct": 0.0
+    }
+  ],
+  "time_hourly_48h": [
+    {
+      "hour": 0,
+      "fraud_count": 2,
+      "legit_count": 3961,
+      "total": 3963,
+      "fraud_rate_pct": 0.05
+    },
+    {
+      "hour": 1,
+      "fraud_count": 2,
+      "legit_count": 2215,
+      "total": 2217,
+      "fraud_rate_pct": 0.09
+    },
+    {
+      "hour": 2,
+      "fraud_count": 21,
+      "legit_count": 1555,
+      "total": 1576,
+      "fraud_rate_pct": 1.332
+    },
+    {
+      "hour": 3,
+      "fraud_count": 13,
+      "legit_count": 1808,
+      "total": 1821,
+      "fraud_rate_pct": 0.714
+    },
+    {
+      "hour": 4,
+      "fraud_count": 6,
+      "legit_count": 1076,
+      "total": 1082,
+      "fraud_rate_pct": 0.555
+    },
+    {
+      "hour": 5,
+      "fraud_count": 11,
+      "legit_count": 1670,
+      "total": 1681,
+      "fraud_rate_pct": 0.654
+    },
+    {
+      "hour": 6,
+      "fraud_count": 3,
+      "legit_count": 1828,
+      "total": 1831,
+      "fraud_rate_pct": 0.164
+    },
+    {
+      "hour": 7,
+      "fraud_count": 23,
+      "legit_count": 3345,
+      "total": 3368,
+      "fraud_rate_pct": 0.683
+    },
+    {
+      "hour": 8,
+      "fraud_count": 5,
+      "legit_count": 5174,
+      "total": 5179,
+      "fraud_rate_pct": 0.097
+    },
+    {
+      "hour": 9,
+      "fraud_count": 15,
+      "legit_count": 7863,
+      "total": 7878,
+      "fraud_rate_pct": 0.19
+    },
+    {
+      "hour": 10,
+      "fraud_count": 2,
+      "legit_count": 8286,
+      "total": 8288,
+      "fraud_rate_pct": 0.024
+    },
+    {
+      "hour": 11,
+      "fraud_count": 43,
+      "legit_count": 8474,
+      "total": 8517,
+      "fraud_rate_pct": 0.505
+    },
+    {
+      "hour": 12,
+      "fraud_count": 9,
+      "legit_count": 7723,
+      "total": 7732,
+      "fraud_rate_pct": 0.116
+    },
+    {
+      "hour": 13,
+      "fraud_count": 9,
+      "legit_count": 7576,
+      "total": 7585,
+      "fraud_rate_pct": 0.119
+    },
+    {
+      "hour": 14,
+      "fraud_count": 13,
+      "legit_count": 8016,
+      "total": 8029,
+      "fraud_rate_pct": 0.162
+    },
+    {
+      "hour": 15,
+      "fraud_count": 14,
+      "legit_count": 7822,
+      "total": 7836,
+      "fraud_rate_pct": 0.179
+    },
+    {
+      "hour": 16,
+      "fraud_count": 14,
+      "legit_count": 7772,
+      "total": 7786,
+      "fraud_rate_pct": 0.18
+    },
+    {
+      "hour": 17,
+      "fraud_count": 12,
+      "legit_count": 7870,
+      "total": 7882,
+      "fraud_rate_pct": 0.152
+    },
+    {
+      "hour": 18,
+      "fraud_count": 15,
+      "legit_count": 8592,
+      "total": 8607,
+      "fraud_rate_pct": 0.174
+    },
+    {
+      "hour": 19,
+      "fraud_count": 7,
+      "legit_count": 7987,
+      "total": 7994,
+      "fraud_rate_pct": 0.088
+    },
+    {
+      "hour": 20,
+      "fraud_count": 8,
+      "legit_count": 8972,
+      "total": 8980,
+      "fraud_rate_pct": 0.089
+    },
+    {
+      "hour": 21,
+      "fraud_count": 14,
+      "legit_count": 9881,
+      "total": 9895,
+      "fraud_rate_pct": 0.141
+    },
+    {
+      "hour": 22,
+      "fraud_count": 3,
+      "legit_count": 8974,
+      "total": 8977,
+      "fraud_rate_pct": 0.033
+    },
+    {
+      "hour": 23,
+      "fraud_count": 17,
+      "legit_count": 6065,
+      "total": 6082,
+      "fraud_rate_pct": 0.28
+    },
+    {
+      "hour": 24,
+      "fraud_count": 4,
+      "legit_count": 3728,
+      "total": 3732,
+      "fraud_rate_pct": 0.107
+    },
+    {
+      "hour": 25,
+      "fraud_count": 8,
+      "legit_count": 1995,
+      "total": 2003,
+      "fraud_rate_pct": 0.399
+    },
+    {
+      "hour": 26,
+      "fraud_count": 36,
+      "legit_count": 1716,
+      "total": 1752,
+      "fraud_rate_pct": 2.055
+    },
+    {
+      "hour": 27,
+      "fraud_count": 4,
+      "legit_count": 1667,
+      "total": 1671,
+      "fraud_rate_pct": 0.239
+    },
+    {
+      "hour": 28,
+      "fraud_count": 17,
+      "legit_count": 1110,
+      "total": 1127,
+      "fraud_rate_pct": 1.508
+    },
+    {
+      "hour": 29,
+      "fraud_count": 0,
+      "legit_count": 1309,
+      "total": 1309,
+      "fraud_rate_pct": 0.0
+    },
+    {
+      "hour": 30,
+      "fraud_count": 6,
+      "legit_count": 2264,
+      "total": 2270,
+      "fraud_rate_pct": 0.264
+    },
+    {
+      "hour": 31,
+      "fraud_count": 0,
+      "legit_count": 3875,
+      "total": 3875,
+      "fraud_rate_pct": 0.0
+    },
+    {
+      "hour": 32,
+      "fraud_count": 4,
+      "legit_count": 5093,
+      "total": 5097,
+      "fraud_rate_pct": 0.078
+    },
+    {
+      "hour": 33,
+      "fraud_count": 1,
+      "legit_count": 7959,
+      "total": 7960,
+      "fraud_rate_pct": 0.013
+    },
+    {
+      "hour": 34,
+      "fraud_count": 6,
+      "legit_count": 8304,
+      "total": 8310,
+      "fraud_rate_pct": 0.072
+    },
+    {
+      "hour": 35,
+      "fraud_count": 10,
+      "legit_count": 8329,
+      "total": 8339,
+      "fraud_rate_pct": 0.12
+    },
+    {
+      "hour": 36,
+      "fraud_count": 8,
+      "legit_count": 7680,
+      "total": 7688,
+      "fraud_rate_pct": 0.104
+    },
+    {
+      "hour": 37,
+      "fraud_count": 8,
+      "legit_count": 7772,
+      "total": 7780,
+      "fraud_rate_pct": 0.103
+    },
+    {
+      "hour": 38,
+      "fraud_count": 10,
+      "legit_count": 8531,
+      "total": 8541,
+      "fraud_rate_pct": 0.117
+    },
+    {
+      "hour": 39,
+      "fraud_count": 12,
+      "legit_count": 8613,
+      "total": 8625,
+      "fraud_rate_pct": 0.139
+    },
+    {
+      "hour": 40,
+      "fraud_count": 8,
+      "legit_count": 8659,
+      "total": 8667,
+      "fraud_rate_pct": 0.092
+    },
+    {
+      "hour": 41,
+      "fraud_count": 17,
+      "legit_count": 8267,
+      "total": 8284,
+      "fraud_rate_pct": 0.205
+    },
+    {
+      "hour": 42,
+      "fraud_count": 18,
+      "legit_count": 8414,
+      "total": 8432,
+      "fraud_rate_pct": 0.213
+    },
+    {
+      "hour": 43,
+      "fraud_count": 12,
+      "legit_count": 7643,
+      "total": 7655,
+      "fraud_rate_pct": 0.157
+    },
+    {
+      "hour": 44,
+      "fraud_count": 10,
+      "legit_count": 7766,
+      "total": 7776,
+      "fraud_rate_pct": 0.129
+    },
+    {
+      "hour": 45,
+      "fraud_count": 2,
+      "legit_count": 7806,
+      "total": 7808,
+      "fraud_rate_pct": 0.026
+    },
+    {
+      "hour": 46,
+      "fraud_count": 6,
+      "legit_count": 6458,
+      "total": 6464,
+      "fraud_rate_pct": 0.093
+    },
+    {
+      "hour": 47,
+      "fraud_count": 4,
+      "legit_count": 4852,
+      "total": 4856,
+      "fraud_rate_pct": 0.082
+    }
+  ],
+  "time_cyclic_24h": [
+    {
+      "hour_of_day": 0,
+      "fraud_count": 6,
+      "legit_count": 7689,
+      "total": 7695,
+      "fraud_rate_pct": 0.078
+    },
+    {
+      "hour_of_day": 1,
+      "fraud_count": 10,
+      "legit_count": 4210,
+      "total": 4220,
+      "fraud_rate_pct": 0.237
+    },
+    {
+      "hour_of_day": 2,
+      "fraud_count": 57,
+      "legit_count": 3271,
+      "total": 3328,
+      "fraud_rate_pct": 1.713
+    },
+    {
+      "hour_of_day": 3,
+      "fraud_count": 17,
+      "legit_count": 3475,
+      "total": 3492,
+      "fraud_rate_pct": 0.487
+    },
+    {
+      "hour_of_day": 4,
+      "fraud_count": 23,
+      "legit_count": 2186,
+      "total": 2209,
+      "fraud_rate_pct": 1.041
+    },
+    {
+      "hour_of_day": 5,
+      "fraud_count": 11,
+      "legit_count": 2979,
+      "total": 2990,
+      "fraud_rate_pct": 0.368
+    },
+    {
+      "hour_of_day": 6,
+      "fraud_count": 9,
+      "legit_count": 4092,
+      "total": 4101,
+      "fraud_rate_pct": 0.219
+    },
+    {
+      "hour_of_day": 7,
+      "fraud_count": 23,
+      "legit_count": 7220,
+      "total": 7243,
+      "fraud_rate_pct": 0.318
+    },
+    {
+      "hour_of_day": 8,
+      "fraud_count": 9,
+      "legit_count": 10267,
+      "total": 10276,
+      "fraud_rate_pct": 0.088
+    },
+    {
+      "hour_of_day": 9,
+      "fraud_count": 16,
+      "legit_count": 15822,
+      "total": 15838,
+      "fraud_rate_pct": 0.101
+    },
+    {
+      "hour_of_day": 10,
+      "fraud_count": 8,
+      "legit_count": 16590,
+      "total": 16598,
+      "fraud_rate_pct": 0.048
+    },
+    {
+      "hour_of_day": 11,
+      "fraud_count": 53,
+      "legit_count": 16803,
+      "total": 16856,
+      "fraud_rate_pct": 0.314
+    },
+    {
+      "hour_of_day": 12,
+      "fraud_count": 17,
+      "legit_count": 15403,
+      "total": 15420,
+      "fraud_rate_pct": 0.11
+    },
+    {
+      "hour_of_day": 13,
+      "fraud_count": 17,
+      "legit_count": 15348,
+      "total": 15365,
+      "fraud_rate_pct": 0.111
+    },
+    {
+      "hour_of_day": 14,
+      "fraud_count": 23,
+      "legit_count": 16547,
+      "total": 16570,
+      "fraud_rate_pct": 0.139
+    },
+    {
+      "hour_of_day": 15,
+      "fraud_count": 26,
+      "legit_count": 16435,
+      "total": 16461,
+      "fraud_rate_pct": 0.158
+    },
+    {
+      "hour_of_day": 16,
+      "fraud_count": 22,
+      "legit_count": 16431,
+      "total": 16453,
+      "fraud_rate_pct": 0.134
+    },
+    {
+      "hour_of_day": 17,
+      "fraud_count": 29,
+      "legit_count": 16137,
+      "total": 16166,
+      "fraud_rate_pct": 0.179
+    },
+    {
+      "hour_of_day": 18,
+      "fraud_count": 33,
+      "legit_count": 17006,
+      "total": 17039,
+      "fraud_rate_pct": 0.194
+    },
+    {
+      "hour_of_day": 19,
+      "fraud_count": 19,
+      "legit_count": 15630,
+      "total": 15649,
+      "fraud_rate_pct": 0.121
+    },
+    {
+      "hour_of_day": 20,
+      "fraud_count": 18,
+      "legit_count": 16738,
+      "total": 16756,
+      "fraud_rate_pct": 0.107
+    },
+    {
+      "hour_of_day": 21,
+      "fraud_count": 16,
+      "legit_count": 17687,
+      "total": 17703,
+      "fraud_rate_pct": 0.09
+    },
+    {
+      "hour_of_day": 22,
+      "fraud_count": 9,
+      "legit_count": 15432,
+      "total": 15441,
+      "fraud_rate_pct": 0.058
+    },
+    {
+      "hour_of_day": 23,
+      "fraud_count": 21,
+      "legit_count": 10917,
+      "total": 10938,
+      "fraud_rate_pct": 0.192
+    }
+  ],
+  "correlations": {
+    "top_positive": [
+      {
+        "feature": "V11",
+        "correlation": 0.1549
+      },
+      {
+        "feature": "V4",
+        "correlation": 0.1334
+      },
+      {
+        "feature": "V2",
+        "correlation": 0.0913
+      },
+      {
+        "feature": "V21",
+        "correlation": 0.0404
+      },
+      {
+        "feature": "V19",
+        "correlation": 0.0348
+      },
+      {
+        "feature": "V20",
+        "correlation": 0.0201
+      },
+      {
+        "feature": "V8",
+        "correlation": 0.0199
+      },
+      {
+        "feature": "V27",
+        "correlation": 0.0176
+      }
+    ],
+    "top_negative": [
+      {
+        "feature": "V17",
+        "correlation": -0.3265
+      },
+      {
+        "feature": "V14",
+        "correlation": -0.3025
+      },
+      {
+        "feature": "V12",
+        "correlation": -0.2606
+      },
+      {
+        "feature": "V10",
+        "correlation": -0.2169
+      },
+      {
+        "feature": "V16",
+        "correlation": -0.1965
+      },
+      {
+        "feature": "V3",
+        "correlation": -0.193
+      },
+      {
+        "feature": "V7",
+        "correlation": -0.1873
+      },
+      {
+        "feature": "V18",
+        "correlation": -0.1115
+      }
+    ]
+  }
+}
