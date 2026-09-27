@@ -1,0 +1,19 @@
+# Vercel Ignore File
+# Excludes heavy development assets and raw datasets from the Serverless bundle
+
+.git
+.github
+.pytest_cache
+venv/
+.venv/
+tests/
+notebooks/
+figures/
+data/creditcard.csv
+data/*.csv
+*.db
+*.png
+*.jpg
+PROJECT_REPORT.md
+PRESENTATION.md
+VIVA.md

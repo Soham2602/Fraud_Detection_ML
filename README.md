@@ -140,8 +140,8 @@ python -m venv venv
 # On Linux/macOS:
 source venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (use requirements-dev.txt for full Streamlit & notebook support)
+pip install -r requirements-dev.txt
 ```
 
 ### Step 2: Run Unit Test Suite
