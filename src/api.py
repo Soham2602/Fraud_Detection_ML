@@ -17,9 +17,9 @@ _SRC_DIR = Path(__file__).resolve().parent
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, status, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 
 from config import DEFAULT_THRESHOLD, FEATURE_COLUMNS, get_risk_level
 from model_service import ModelService, ValidationError
@@ -121,13 +121,37 @@ class WhatIfInput(BaseModel):
 
 
 @app.get("/", tags=["General"])
-def root():
+def root(request: Request):
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept:
+        try:
+            from html_dashboard import HTML_DASHBOARD
+            return HTMLResponse(content=HTML_DASHBOARD)
+        except Exception:
+            pass
     return {
         "platform": "SENTINEL — Fraud Intelligence Platform",
         "version": "2.0.0",
+        "portal": "/portal",
         "documentation": "/docs",
         "health": "/health",
         "disclaimer": "Educational AI fraud intelligence platform. Do not enter real credit card numbers.",
+    }
+
+
+@app.get("/portal", response_class=HTMLResponse, tags=["Web Portal"])
+@app.get("/dashboard", response_class=HTMLResponse, tags=["Web Portal"])
+def portal_view():
+    from html_dashboard import HTML_DASHBOARD
+    return HTMLResponse(content=HTML_DASHBOARD)
+
+
+@app.get("/debug", tags=["Monitoring"])
+def debug_info(request: Request):
+    return {
+        "headers": dict(request.headers),
+        "scope_path": request.scope.get("path"),
+        "url_path": request.url.path,
     }
 
 
