@@ -243,10 +243,13 @@ def predict_batch_transactions(payload: BatchInput):
 
 
 @app.post("/explain", tags=["Explainability"])
-def explain_transaction(features: Dict[str, Any]):
+def explain_transaction(payload: Dict[str, Any]):
     engine = ExplainabilityEngine.get_instance()
     try:
-        res = engine.explain_transaction(features, top_k=8)
+        # Accept both flat feature dicts and nested {"features": {...}} payloads
+        features_dict = payload.get("features", payload) if isinstance(payload.get("features"), dict) else payload
+        top_k = int(payload.get("top_k", 8)) if "top_k" in payload else 8
+        res = engine.explain_transaction(features_dict, top_k=top_k)
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
