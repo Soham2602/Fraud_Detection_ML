@@ -25,10 +25,16 @@ def presets():
 
 
 def test_root_endpoint(client):
-    response = client.get("/")
+    # Test JSON metadata request
+    response = client.get("/", headers={"accept": "application/json"})
     assert response.status_code == 200
     data = response.json()
     assert "SENTINEL" in data["platform"]
+
+    # Test HTML dashboard request
+    html_resp = client.get("/", headers={"accept": "text/html"})
+    assert html_resp.status_code == 200
+    assert "SENTINEL" in html_resp.text
 
 
 def test_health_endpoint(client):

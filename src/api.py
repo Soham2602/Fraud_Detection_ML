@@ -120,23 +120,27 @@ class WhatIfInput(BaseModel):
 
 
 
-@app.get("/", tags=["General"])
+@app.get("/", response_class=HTMLResponse, tags=["Web Portal"])
 def root(request: Request):
+    """
+    Serve the interactive SENTINEL web portal by default.
+    If the client explicitly requests application/json without text/html, return API metadata.
+    """
     accept = request.headers.get("accept", "")
-    if "text/html" in accept:
-        try:
-            from html_dashboard import HTML_DASHBOARD
-            return HTMLResponse(content=HTML_DASHBOARD)
-        except Exception:
-            pass
-    return {
-        "platform": "SENTINEL — Fraud Intelligence Platform",
-        "version": "2.0.0",
-        "portal": "/portal",
-        "documentation": "/docs",
-        "health": "/health",
-        "disclaimer": "Educational AI fraud intelligence platform. Do not enter real credit card numbers.",
-    }
+    if "application/json" in accept and "text/html" not in accept:
+        return JSONResponse(content={
+            "platform": "SENTINEL — Fraud Intelligence Platform",
+            "version": "2.0.0",
+            "portal": "/",
+            "documentation": "/docs",
+            "health": "/health",
+            "disclaimer": "Educational AI fraud intelligence platform. Do not enter real credit card numbers.",
+        })
+    try:
+        from src.html_dashboard import HTML_DASHBOARD
+    except ImportError:
+        from html_dashboard import HTML_DASHBOARD
+    return HTMLResponse(content=HTML_DASHBOARD)
 
 
 @app.get("/portal", response_class=HTMLResponse, tags=["Web Portal"])
