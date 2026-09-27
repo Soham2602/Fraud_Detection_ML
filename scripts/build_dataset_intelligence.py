@@ -137,6 +137,60 @@ def compute_dataset_summary(df_in: pd.DataFrame) -> dict:
         "top_negative": [{"feature": k, "correlation": round(float(v), 4)} for k, v in top_neg_corr.items()],
     }
 
+    # Feature profiles for all 30 features
+    feature_profiles = {}
+    for col in FEATURE_COLUMNS:
+        s_all = df_raw[col]
+        s_legit = df_raw[df_raw["Class"] == 0][col]
+        s_fraud = df_raw[df_raw["Class"] == 1][col]
+        corr_val = float(corr_series.get(col, 0.0))
+        
+        feature_profiles[col] = {
+            "feature": col,
+            "min": round(float(s_all.min()), 4),
+            "max": round(float(s_all.max()), 4),
+            "mean": round(float(s_all.mean()), 4),
+            "median": round(float(s_all.median()), 4),
+            "std": round(float(s_all.std()), 4),
+            "fraud_mean": round(float(s_fraud.mean()), 4),
+            "fraud_median": round(float(s_fraud.median()), 4),
+            "fraud_std": round(float(s_fraud.std()), 4),
+            "legit_mean": round(float(s_legit.mean()), 4),
+            "legit_median": round(float(s_legit.median()), 4),
+            "legit_std": round(float(s_legit.std()), 4),
+            "correlation_with_class": round(corr_val, 4),
+        }
+
+    # Top features correlation matrix for Plotly Heatmap
+    top_corr_features = ["V17", "V14", "V12", "V10", "V16", "V3", "V7", "V11", "V4", "V2", "Amount", "Time", "Class"]
+    corr_matrix_df = df_raw[top_corr_features].corr().round(4)
+    correlation_heatmap_data = {
+        "features": top_corr_features,
+        "z": corr_matrix_df.values.tolist(),
+    }
+
+    # Curated 3D sample: all 492 frauds + 1008 random legits (total 1500 points)
+    frauds_df = df_raw[df_raw["Class"] == 1]
+    legits_sample = df_raw[df_raw["Class"] == 0].sample(n=1008, random_state=42)
+    combined_sample = pd.concat([frauds_df, legits_sample]).sample(frac=1.0, random_state=42)
+    
+    sample_3d = {
+        "index": combined_sample.index.tolist(),
+        "Class": combined_sample["Class"].astype(int).tolist(),
+        "Amount": combined_sample["Amount"].round(2).tolist(),
+        "Time": combined_sample["Time"].round(0).tolist(),
+        "V14": combined_sample["V14"].round(3).tolist(),
+        "V10": combined_sample["V10"].round(3).tolist(),
+        "V12": combined_sample["V12"].round(3).tolist(),
+        "V17": combined_sample["V17"].round(3).tolist(),
+        "V4": combined_sample["V4"].round(3).tolist(),
+        "V11": combined_sample["V11"].round(3).tolist(),
+        "V16": combined_sample["V16"].round(3).tolist(),
+        "V2": combined_sample["V2"].round(3).tolist(),
+        "V7": combined_sample["V7"].round(3).tolist(),
+        "V3": combined_sample["V3"].round(3).tolist(),
+    }
+
     summary = {
         "overview": {
             "total_transactions": total_rows,
@@ -158,6 +212,9 @@ def compute_dataset_summary(df_in: pd.DataFrame) -> dict:
         "time_hourly_48h": hourly_48h,
         "time_cyclic_24h": cyclic_24h,
         "correlations": correlations,
+        "feature_profiles": feature_profiles,
+        "correlation_heatmap": correlation_heatmap_data,
+        "sample_3d": sample_3d,
     }
 
     return summary

@@ -3,9 +3,10 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12%20|%203.14-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-30%20Passed%20%E2%9C%93-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-50%20Passed%20%E2%9C%93-brightgreen.svg)](tests/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B.svg)](https://streamlit.io)
+[![Plotly](https://img.shields.io/badge/Analytics-Plotly%20Interactive-3f4f75.svg)](https://plotly.com/python/)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel%20Production-success?logo=vercel)](https://fraud-detection-lovat-nine.vercel.app)
 
 > 🚀 **Live Production Deployment:** [https://fraud-detection-lovat-nine.vercel.app](https://fraud-detection-lovat-nine.vercel.app)  
@@ -16,16 +17,19 @@
 
 ## 1. Executive Summary & Overview
 
-**SENTINEL** is an end-to-end fraud monitoring and investigation platform powered by machine learning. Designed as a rigorous final-year B.Tech (AIML / ECE) project, it transforms conventional binary classification into a defense-grade fintech intelligence suite.
+**SENTINEL** is an end-to-end fraud monitoring, analytics, and investigation platform powered by machine learning. Designed as a rigorous final-year B.Tech (AIML / ECE) project, it transforms conventional binary classification into a defense-grade fintech intelligence suite.
 
 Rather than a simplistic page that outputs "Fraud or Legit", SENTINEL provides:
-- **Calibrated Risk Scoring (0–100)** with dynamic operational risk bands (LOW, MEDIUM, HIGH, CRITICAL).
-- **Explainable AI (XAI)** powered by SHAP TreeExplainer decomposing single-transaction predictions into component-level force attributions.
-- **Dynamic Threshold Playground** modeling real-world asymmetric fraud costs (precision vs. recall trade-offs).
-- **Live Stream Simulation** generating synthetic high-velocity payment traffic with burst-attack injections.
-- **What-If Sensitivity Simulator** testing hypothetical parameter shifts without retraining.
-- **Analyst Investigation Vault & SQLite Audit Trail** supporting review workflows (Mark Reviewed, Clear Legitimate, Escalate).
-- **Dual Deployment Architecture**: Full multi-page Streamlit operations center + headless FastAPI REST backend deployable on **Vercel Serverless**.
+- **Calibrated Deterministic Risk Scoring (0–100)** with dynamic operational risk bands (LOW, MEDIUM, HIGH, CRITICAL).
+- **10 Interactive Security & Investigation Modules:** Command Center, Dataset Intelligence, Transaction Investigation, Fraud Alerts, Model Intelligence, Explainable AI (XAI), Live Simulation, What-If Analysis, Transaction Explorer, and System Administration.
+- **Plotly Interactive Scientific Suite:** Native interactive charts featuring pan, zoom, hover tooltips, and image exports.
+- **3D Feature Space Manifold:** Interactive 3D point cloud of 1,500 real dataset transactions (all 492 confirmed fraud cases + 1,008 legitimate cases).
+- **Explainable AI (XAI):** Powered by SHAP TreeExplainer decomposing single-transaction predictions into directional component force attributions (+ / -).
+- **Interactive Threshold Playground:** Dynamic 99-step sweep ($0.01$ to $0.99$) modeling real-world asymmetric fraud costs (precision vs. recall vs. false alarms).
+- **Live Stream Simulation:** Generating synthetic high-velocity payment traffic with burst-attack injections through the real model.
+- **What-If Sensitivity Simulator:** Testing empirical model boundary response under altered transaction amounts or PCA dimensions without asserting false causality.
+- **Analyst Investigation Vault & SQLite Audit Trail:** Supporting review workflows (Mark Reviewed, Clear Legitimate, Escalate, add investigation notes).
+- **Dual Deployment Architecture:** Full multi-page Streamlit operations center + headless FastAPI REST backend deployable on **Vercel Serverless**.
 
 ---
 
