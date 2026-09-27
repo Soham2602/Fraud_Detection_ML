@@ -6,7 +6,11 @@
 [![Tests](https://img.shields.io/badge/Tests-30%20Passed%20%E2%9C%93-brightgreen.svg)](tests/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B.svg)](https://streamlit.io)
-[![Vercel Ready](https://img.shields.io/badge/Deploy-Vercel%20Serverless-black.svg)](vercel.json)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel%20Production-success?logo=vercel)](https://fraud-detection-lovat-nine.vercel.app)
+
+> 🚀 **Live Production Deployment:** [https://fraud-detection-lovat-nine.vercel.app](https://fraud-detection-lovat-nine.vercel.app)  
+> 📖 **Interactive Swagger API Docs:** [https://fraud-detection-lovat-nine.vercel.app/docs](https://fraud-detection-lovat-nine.vercel.app/docs)  
+> 🩺 **System Health & Telemetry:** [https://fraud-detection-lovat-nine.vercel.app/health](https://fraud-detection-lovat-nine.vercel.app/health)
 
 ---
 
